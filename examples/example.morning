@@ -1,0 +1,9 @@
+
+function orint_hello_world(string text): none -> {
+    printline("Hello, %s", text);
+}
+
+entrypoint main() {
+    print_hello_world("world");
+    return 0;
+}
