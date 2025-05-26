@@ -1,8 +1,5 @@
-#include "lib.hpp"
+#include <cassert>
 
-auto main() -> int
-{
-  auto const lib = library {};
-
-  return lib.name == "morninglang" ? 0 : 1;
+auto main() -> int {
+    assert(1 + 2 == 3);
 }

@@ -7,7 +7,7 @@ int main() {
 
     MorningLanguageLLVM vm;
 
-    vm.exec(program);
+    vm.execute(program);
 
     return 0;
 }
