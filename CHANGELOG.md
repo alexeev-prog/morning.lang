@@ -1,3 +1,21 @@
+commit 431c3afefc315aac22e728b34834f873e116960c
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Tue May 27 21:38:35 2025 +0700
+
+    docs/style: improve docs, improve codestyle and add clang utils for formatting code
+
+commit 9820e1ca5d8eb82091bbcfe8b260b1d6a08c0c91
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Tue May 27 00:13:58 2025 +0700
+
+    docs: fix docs
+
+commit 2268cfc784b20e9a2b5a720915b152a1388464f5
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Mon May 26 23:57:18 2025 +0700
+
+    fix docs
+
 commit ee2540fd176426c3323950f4997ca5073b9543e6
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Mon May 26 23:39:40 2025 +0700

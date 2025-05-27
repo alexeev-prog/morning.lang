@@ -33,7 +33,7 @@
     <img src="https://raw.githubusercontent.com/alexeev-prog/morning.lang/refs/heads/main/docs/pallet-0.png">
 </p>
 
-![logo](./docs/logo.png)
+<img src="https://raw.githubusercontent.com/alexeev-prog/morning.lang/refs/heads/main/docs/logo.png">
 
 At the core of the MorningLang compiler lies a meticulously crafted hierarchy of LLVM components that orchestrate the translation from high-level language constructs to optimized machine code. The system's architecture revolves around three fundamental pillars that form the backbone of its code generation capabilities.
 
