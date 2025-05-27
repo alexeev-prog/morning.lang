@@ -1,5 +1,12 @@
 # Building with CMake
 
+## Activate Nix Shell
+Morning.lang support nix:
+
+```bash
+nix-shell
+```
+
 ## Build
 
 This project doesn't require any special command-line flags to build to keep
@@ -19,6 +26,19 @@ generator, like the Visual Studio ones:
 ```sh
 cmake -S . -B build
 cmake --build build --config Release
+```
+
+### Build script
+You can use our build script:
+
+```bash
+./build.sh
+```
+
+If you want a compile and run example, just run this script:
+
+```bash
+./compile-run.sh
 ```
 
 ### Building with MSVC

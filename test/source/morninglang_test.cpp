@@ -1,5 +1,5 @@
 #include <cassert>
 
 auto main() -> int {
-    assert(1 + 2 == 3);
+	static_assert(1 + 2 == 3);
 }

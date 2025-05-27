@@ -35,6 +35,8 @@
 
 ![logo](./docs/logo.png)
 
+At the core of the MorningLang compiler lies a meticulously crafted hierarchy of LLVM components that orchestrate the translation from high-level language constructs to optimized machine code. The system's architecture revolves around three fundamental pillars that form the backbone of its code generation capabilities.
+
  > [!CAUTION]
  > At the moment, morning.lang is under active development, many things may not work, and this version is not recommended for use (all at your own risk)
 
@@ -46,3 +48,33 @@
 
  > [!NOTE]
  > Licensing: [GNU GPL V3](./LICENSE)
+
+## Documentation
+Online docs available on [this link](https://alexeev-prog.github.io/morning.lang/).
+
+## Why Choose **Morning.lang**? 🚀
+
+| 🌟 Feature                | 🔍 Why It Matters                                                      |
+|---------------------------|------------------------------------------------------------------------|
+| ⚡️ Fast & Lightweight     | Minimizes load times and maximizes runtime efficiency.                 |
+| 🧩 Modular Architecture   | Enables easy extension, customization, and integration of new features.|
+| 🎮 Vulkan API Integration | Leverages cutting-edge graphics API for maximum rendering performance. |
+| 📚 Modern C++17 Codebase  | Clean, maintainable, and future-proof code for professional workflows. |
+| 🌍 Cross-Platform         | Runs seamlessly on Windows, Linux, and macOS.                          |
+
+## Why Use **Morning.lang**? ✨
+
+- **Performance driven:** LLVM-based language, written in C++.
+- **Extensible by design:** Modular, loosely coupled systems; add or replace features gracefully.  
+- **Modern standards:** C++17 compliance ensures clean, maintainable, future-proof code.  
+- **Cross-platform:** Write once, run on Windows, Linux, and macOS seamlessly.  
+- **Built-in key systems:** Sound, physics, map loading, events right out of the box.
+
+## Join the Community! 🌐
+
+- **GitHub Issues** — for bug reporting and feature requests. 
+- **Contact Email** — for direct feedback, suggestions, and collaboration inquiries. (email: `alexeev.dev@mail.ru`. Please insert "Morning.lang Issue" at the beginning of the subject line.)
+
+Thank you for exploring **Morning.lang** — let’s create extraordinary 3D experiences together! 🚀
+
+

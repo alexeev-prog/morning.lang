@@ -1,4 +1,4 @@
-# MorningLang LLVM Code Generation System - Exhaustive Technical Documentation
+# EN: MorningLang LLVM Code Generation System - Exhaustive Technical Documentation
 
 This comprehensive documentation provides an in-depth analysis of the MorningLang compiler's LLVM backend implementation, offering unprecedented detail about every architectural decision, code construct, and LLVM interaction. Designed for compiler engineers seeking deep understanding, it combines narrative explanation with technical precision to illuminate both the "how" and "why" of LLVM-based code generation.
 

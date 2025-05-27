@@ -1,13 +1,15 @@
+#include <string>
+
 #include "morningllvm.hpp"
 
-int main() {
-    std::string program = R"(
+auto main() -> int {
+    const std::string PROGRAM = R"(
         42
     )";
 
-    MorningLanguageLLVM vm;
+    MorningLanguageLLVM morning_vm;
 
-    vm.execute(program);
+    morning_vm.execute(PROGRAM);
 
     return 0;
 }
