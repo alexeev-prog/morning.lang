@@ -45,10 +45,14 @@ class MorningLanguageLLVM {
      * 2. Print IR to console for debugging
      * 3. Save IR to file for later use
      */
-    void execute(const std::string& /*program*/) {
+    auto execute(const std::string& /*program*/) -> int {
         generate_ir();
+        llvm::verifyModule(*m_MODULE, &llvm::errs());
+
         m_MODULE->print(llvm::outs(), nullptr);	   // Like cout for LLVM
         save_module_to_file("./out.ll");
+
+        return 0;
     }
 
   private:
@@ -97,9 +101,9 @@ class MorningLanguageLLVM {
     void generate_ir() {
         // Create function type: i32 main()
         auto* main_type =
-            llvm::FunctionType::get(m_IR_BUILDER->getInt32Ty(),	   // Return type = 32-bit integer
-                                    /* Parameters */ {},	// Empty list = no arguments
-                                    /* Varargs */ false	   // No "..."
+            llvm::FunctionType::get(m_IR_BUILDER->getInt32Ty(),	        // Return type = 32-bit integer
+                                    /* Parameters */ {},	            // Empty list = no arguments
+                                    /* Varargs */ false	            // No "..."
             );
 
         m_ACTIVE_FUNCTION = create_function("main", main_type);
@@ -154,11 +158,11 @@ class MorningLanguageLLVM {
      */
     auto create_function_prototype(const std::string& name, llvm::FunctionType* type) -> llvm::Function* {
         auto* func = llvm::Function::Create(type,
-                                            llvm::Function::ExternalLinkage,	// Why? So OS can find main()
+                                            llvm::Function::ExternalLinkage,	    // Why? So OS can find main()
                                             name,
-                                            m_MODULE.get()	  // Module ownership
+                                            m_MODULE.get()	                            // Module ownership
         );
-        verifyFunction(*func);	  // Like spell-check for LLVM IR
+        verifyFunction(*func);	                                                        // Like spell-check for LLVM IR
         return func;
     }
 
@@ -173,7 +177,7 @@ class MorningLanguageLLVM {
      */
     void setup_function_body(llvm::Function* func) {
         auto* entry_block = create_basic_block("entry", func);
-        m_IR_BUILDER->SetInsertPoint(entry_block);	  // "Start writing here"
+        m_IR_BUILDER->SetInsertPoint(entry_block);                                  // "Start writing here"
     }
 
     /**
@@ -215,8 +219,8 @@ class MorningLanguageLLVM {
      */
     void initialize_module() {
         m_CONTEXT = std::make_unique<llvm::LLVMContext>();
-        m_MODULE = std::make_unique<llvm::Module>("MorningLangCompilationUnit",	   // Module name
-                                                  *m_CONTEXT	// Context reference
+        m_MODULE = std::make_unique<llvm::Module>("MorningLangCompilationUnit",	    // Module name
+                                                  *m_CONTEXT	                            // Context reference
         );
         m_IR_BUILDER = std::make_unique<llvm::IRBuilder<>>(*m_CONTEXT);
     }

@@ -9,6 +9,7 @@ let
     clang-analyzer
     libclang
     llvm
+    libffi
     stb
     entt
     gcc
@@ -16,7 +17,10 @@ let
     bolt
     pkg-config
     gdb
+    catch2
+    catch2_3
     valgrind
+    libxml2
   ];
   lib = libs;
 in

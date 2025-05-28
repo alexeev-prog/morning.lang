@@ -4,10 +4,17 @@
 
 project(morninglangTests LANGUAGES CXX)
 
+find_package(Catch2 3 CONFIG REQUIRED)
+
+
 # ---- Tests ----
 
 add_executable(morninglang_test source/morninglang_test.cpp)
-target_link_libraries(morninglang_test PRIVATE morninglang_lib)
+target_link_libraries(
+    morninglang_test PRIVATE
+    morninglang_lib
+)
+target_link_libraries(morninglang_test PRIVATE Catch2::Catch2WithMain)
 target_compile_features(morninglang_test PRIVATE cxx_std_17)
 
 add_test(NAME morninglang_test COMMAND morninglang_test)

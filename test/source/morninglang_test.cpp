@@ -1,5 +1,14 @@
-#include <cassert>
+#include <catch2/catch_test_macros.hpp>
 
-auto main() -> int {
-	static_assert(1 + 2 == 3);
+#include "morningllvm.hpp"
+
+TEST_CASE("Check base", "[BASIC]") {
+	const std::string PROGRAM = R"(
+        42
+    )";
+
+    MorningLanguageLLVM morning_vm;
+
+	int status = morning_vm.execute(PROGRAM);
+	REQUIRE(status == 0);
 }
