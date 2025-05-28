@@ -1,3 +1,15 @@
+commit add78af0d5b1f06a091478b46f0fa25ab5b6285d
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Wed May 28 21:42:17 2025 +0700
+
+    fix codestyle, add tests, impove build script
+
+commit 40014b1a61a94c2932cecf3c00bf435199f778f3
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Tue May 27 21:41:58 2025 +0700
+
+    small fixes in MD files
+
 commit 431c3afefc315aac22e728b34834f873e116960c
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Tue May 27 21:38:35 2025 +0700
