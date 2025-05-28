@@ -49,7 +49,7 @@ print_command() {
 
 # Function to print the intro with ASCII art
 print_intro() {
-    echo -e "\n${BLUE}"
+    echo -e "${BLUE}"
     echo -e "${BLUE}███    ███ ██████  ███    ██ ███    ██  ██████  ${NC}   ${GREEN}Morning.lang${NC}"
     echo -e "${BLUE}████  ████ ██   ██ ████   ██ ████   ██ ██       ${NC}   ${GREEN}Maintained by alexeev-prog${NC}"
     echo -e "${BLUE}██ ████ ██ ██████  ██ ██  ██ ██ ██  ██ ██   ███ ${NC}   ${CYAN}\033[4mhttps://github.com/alexeev-prog/morning.lang${NC}\033[0m"

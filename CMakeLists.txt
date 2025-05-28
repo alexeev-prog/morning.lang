@@ -15,6 +15,8 @@ include(cmake/variables.cmake)
 
 find_package(LLVM REQUIRED CONFIG)  
 
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Waddress -O2 -Werror -pedantic-errors -Wall -Wextra -Wpedantic -Wcast-align -Wcast-qual -Wconversion -Wctor-dtor-privacy -Wextra-semi -Wfloat-equal -Wnon-virtual-dtor -Wold-style-cast -Woverloaded-virtual -Wredundant-decls -Wsign-conversion")
+
 # ---- Declare library ----
 
 include_directories(${LLVM_INCLUDE_DIRS})  

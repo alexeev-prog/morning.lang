@@ -158,11 +158,11 @@ class MorningLanguageLLVM {
      */
     auto create_function_prototype(const std::string& name, llvm::FunctionType* type) -> llvm::Function* {
         auto* func = llvm::Function::Create(type,
-                                            llvm::Function::ExternalLinkage,	    // Why? So OS can find main()
+                                            llvm::Function::ExternalLinkage,	        // Why? So OS can find main()
                                             name,
-                                            m_MODULE.get()	                            // Module ownership
+                                            m_MODULE.get()	                                // Module ownership
         );
-        verifyFunction(*func);	                                                        // Like spell-check for LLVM IR
+        verifyFunction(*func);	                                                            // Like spell-check for LLVM IR
         return func;
     }
 
@@ -177,7 +177,7 @@ class MorningLanguageLLVM {
      */
     void setup_function_body(llvm::Function* func) {
         auto* entry_block = create_basic_block("entry", func);
-        m_IR_BUILDER->SetInsertPoint(entry_block);                                  // "Start writing here"
+        m_IR_BUILDER->SetInsertPoint(entry_block);                                      // "Start writing here"
     }
 
     /**
@@ -206,7 +206,7 @@ class MorningLanguageLLVM {
     void save_module_to_file(const std::string& filename) {
         std::error_code err_code;
         llvm::raw_fd_ostream out_file(filename, err_code);
-        m_MODULE->print(out_file, nullptr);	   // Write module contents
+        m_MODULE->print(out_file, nullptr);	                                        // Write module contents
     }
 
     /**
