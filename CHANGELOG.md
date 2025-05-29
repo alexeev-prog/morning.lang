@@ -1,3 +1,15 @@
+commit 93a6fb7b4cdd1e1f83ab1ea8802acbdbb9390d1c
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Thu May 29 17:39:31 2025 +0700
+
+    switch to i64, add `printf` function and raw strings
+
+commit b10ac877d34713a287d69ff0774d8c669c5daf30
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Thu May 29 04:42:59 2025 +0700
+
+    update build system
+
 commit 4879586e1f1a25292675be36e986a44e25f28d75
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Wed May 28 21:42:54 2025 +0700
