@@ -2,6 +2,7 @@
 
 // LLVM Core Headers (Essential Components)
 #include <llvm/IR/BasicBlock.h>	                // Code blocks without branches
+#include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/Function.h>	                // Function representation
 #include <llvm/IR/Value.h>
 #include <llvm/IR/Verifier.h>	                // IR validity checks
@@ -15,6 +16,7 @@
 #include <memory>	                            // Smart pointers
 #include <string>	                            // String handling
 #include <system_error>                         // Use system errors (providers error code)
+#include <vector>
 
 /**
  * @class MorningLanguageLLVM
@@ -34,7 +36,10 @@ class MorningLanguageLLVM {
      * 2. A notebook (Module) to write our code in
      * 3. A pen (IRBuilder) to write instructions
      */
-    MorningLanguageLLVM() { initialize_module(); }
+    MorningLanguageLLVM() {
+        initialize_module();
+        setup_extern_functions();
+    }
 
     /**
      * @brief Main compilation process
@@ -101,14 +106,25 @@ class MorningLanguageLLVM {
     void generate_ir() {
         // Create function type: i32 main()
         auto* main_type =
-            llvm::FunctionType::get(m_IR_BUILDER->getInt32Ty(),	        // Return type = 32-bit integer
+            llvm::FunctionType::get(m_IR_BUILDER->getInt64Ty(),	        // Return type = 32-bit integer
                                     /* Parameters */ {},	            // Empty list = no arguments
                                     /* Varargs */ false	            // No "..."
             );
 
         m_ACTIVE_FUNCTION = create_function("main", main_type);
-        llvm::Value* result = generate_expression();
-        m_IR_BUILDER->CreateRet(result);	// Insert return instruction
+        
+        generate_expression();
+
+        m_IR_BUILDER->CreateRet(m_IR_BUILDER->getInt64(0));
+
+        // llvm::Value* result = generate_expression();
+
+        // auto *i32_result = m_IR_BUILDER->CreatePtrToInt(
+        //     result, 
+        //     m_IR_BUILDER->getInt64Ty()
+        // );
+
+        // m_IR_BUILDER->CreateRet(i32_result);	// Insert return instruction
     }
 
     /**
@@ -121,10 +137,36 @@ class MorningLanguageLLVM {
      * - %1 = add i32 %0, 1 (typical SSA form)
      */
     auto generate_expression() -> llvm::Value* {
-        // Current simplification: Always returns EXAMPLE_MAGIC_NUMBER
-        const int EXAMPLE_MAGIC_NUMBER = 42;
+        // // Current simplification: Always returns EXAMPLE_MAGIC_NUMBER
+        // const int EXAMPLE_MAGIC_NUMBER = 42;
 
-        return m_IR_BUILDER->getInt32(EXAMPLE_MAGIC_NUMBER);	  // Create constant int32
+        // return m_IR_BUILDER->getInt32(EXAMPLE_MAGIC_NUMBER);	  // Create constant int32
+        auto *str = m_IR_BUILDER->CreateGlobalStringPtr("Hello\n");
+
+        auto *printf_function = m_MODULE->getFunction("printf");
+
+        std::vector<llvm::Value*> args{str};
+
+        return m_IR_BUILDER->CreateCall(printf_function, args);
+    }
+
+    /**
+     * @brief Set the up extern functions
+     * 
+     * Define external functions (from libc++)
+     **/
+    void setup_extern_functions() {
+        // i8* to substitute for char*, void*, etc
+        auto *byte_ptr_ty = m_IR_BUILDER->getInt8Ty()->getPointerTo();
+
+        // int printf(const char* format, ...);
+        m_MODULE->getOrInsertFunction("printf", 
+            llvm::FunctionType::get(
+                m_IR_BUILDER->getInt64Ty(),
+                byte_ptr_ty,
+                true
+            )
+        );
     }
 
     /**
@@ -158,11 +200,11 @@ class MorningLanguageLLVM {
      */
     auto create_function_prototype(const std::string& name, llvm::FunctionType* type) -> llvm::Function* {
         auto* func = llvm::Function::Create(type,
-                                            llvm::Function::ExternalLinkage,	        // Why? So OS can find main()
+                                            llvm::Function::ExternalLinkage,	    // Why? So OS can find main()
                                             name,
-                                            m_MODULE.get()	                                // Module ownership
+                                            m_MODULE.get()	                            // Module ownership
         );
-        verifyFunction(*func);	                                                            // Like spell-check for LLVM IR
+        verifyFunction(*func);	                                                        // Like spell-check for LLVM IR
         return func;
     }
 
@@ -177,7 +219,7 @@ class MorningLanguageLLVM {
      */
     void setup_function_body(llvm::Function* func) {
         auto* entry_block = create_basic_block("entry", func);
-        m_IR_BUILDER->SetInsertPoint(entry_block);                                      // "Start writing here"
+        m_IR_BUILDER->SetInsertPoint(entry_block);                                  // "Start writing here"
     }
 
     /**
@@ -206,7 +248,7 @@ class MorningLanguageLLVM {
     void save_module_to_file(const std::string& filename) {
         std::error_code err_code;
         llvm::raw_fd_ostream out_file(filename, err_code);
-        m_MODULE->print(out_file, nullptr);	                                        // Write module contents
+        m_MODULE->print(out_file, nullptr);	   // Write module contents
     }
 
     /**

@@ -4,7 +4,9 @@
 
 auto main() -> int {
     const std::string PROGRAM = R"(
+
         42
+        
     )";
 
     MorningLanguageLLVM morning_vm;
