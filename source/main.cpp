@@ -5,7 +5,7 @@
 auto main() -> int {
     const std::string PROGRAM = R"(
 
-        42
+        printf "Value: %d" 2025
         
     )";
 

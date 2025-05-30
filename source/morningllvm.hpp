@@ -112,7 +112,7 @@ class MorningLanguageLLVM {
             );
 
         m_ACTIVE_FUNCTION = create_function("main", main_type);
-        
+
         generate_expression();
 
         m_IR_BUILDER->CreateRet(m_IR_BUILDER->getInt64(0));
@@ -120,7 +120,7 @@ class MorningLanguageLLVM {
         // llvm::Value* result = generate_expression();
 
         // auto *i32_result = m_IR_BUILDER->CreatePtrToInt(
-        //     result, 
+        //     result,
         //     m_IR_BUILDER->getInt64Ty()
         // );
 
@@ -152,7 +152,7 @@ class MorningLanguageLLVM {
 
     /**
      * @brief Set the up extern functions
-     * 
+     *
      * Define external functions (from libc++)
      **/
     void setup_extern_functions() {
@@ -160,7 +160,7 @@ class MorningLanguageLLVM {
         auto *byte_ptr_ty = m_IR_BUILDER->getInt8Ty()->getPointerTo();
 
         // int printf(const char* format, ...);
-        m_MODULE->getOrInsertFunction("printf", 
+        m_MODULE->getOrInsertFunction("printf",
             llvm::FunctionType::get(
                 m_IR_BUILDER->getInt64Ty(),
                 byte_ptr_ty,

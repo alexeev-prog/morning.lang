@@ -18,6 +18,7 @@ let
     pkg-config
     gdb
     catch2
+    nodejs
     catch2_3
     valgrind
     libxml2
@@ -55,6 +56,10 @@ pkgs.mkShell {
 
     export CC=clang
     export CXX=clang++
+	npm config set prefix ./npm-packages/
+	npm install -g syntax-cli
+    export PATH="./npm-packages/bin:$PATH"
+    export NODE_PATH="./npm-packages/lib/node_modules"
   '';
 }
 
