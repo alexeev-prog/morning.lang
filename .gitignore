@@ -37,3 +37,4 @@ build/
 *.log
 package-lock.json
 npm-packages/
+out.bin

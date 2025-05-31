@@ -1,3 +1,9 @@
+commit 6db62d35e47ef8c3c3d95438b7c6339ee10a2f25
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Sat May 31 05:08:38 2025 +0700
+
+    improve dev shell, add bnf syntax file
+
 commit a70c30400a9f7b913366506319829901a9868e87
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Thu May 29 17:40:57 2025 +0700
