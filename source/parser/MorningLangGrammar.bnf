@@ -1,0 +1,87 @@
+/**
+ * Morning.lang grammar
+ *
+ * syntax-cli -g source/parser/MorningLangGrammar.bnf -m LALR1 -o source/parser/MorningLangGrammar.h
+ *
+ */
+
+// Lexical grammar (tokens)
+
+%lex
+
+%%
+
+\/\/.*                          %empty
+\/\*[\s\S]*?\*\/                %empty
+
+\s+                             %empty
+\d+                             NUMBER
+\"[^\"]*\"                      STRING
+[\w\-+*=!<>/]+                  SYMBOL
+
+/lex
+
+// Syntastic grammar (BNF)
+
+%{
+#include <string>
+#include <vector>
+
+enum class ExpType {
+    NUMBER,
+    STRING,
+    SYMBOL,
+    LIST
+};
+
+struct Exp {
+    ExpType type;
+
+    int number;
+    std::string string;
+    std::vector<Exp> list;
+
+    // Numbers
+    Exp(int number) : type(ExpType::NUMBER), number(number) {}
+
+    // Strings&symbols
+    Exp(std::string& str_value) {
+        if (str_value[0] == '"') {
+            type = ExpType::STRING;
+            string = str_value.substr(1, str_value.size() - 2);
+        } else {
+            type = ExpType::SYMBOL;
+            string = str_value;
+        }
+    }
+
+    // Lists:
+    Exp(std::vector<Exp> list) : type(ExpType::LIST), list(list) {}
+};
+
+using Value = Exp;
+
+%}
+
+%%
+
+Exp
+    : Atom
+    | List
+    ;
+
+Atom
+    : NUMBER { $$ = Exp(std::stoi($1)) }
+    | STRING { $$ = Exp($1) }
+    | SYMBOL { $$ = Exp($1) }
+    ;
+
+List
+    : '(' ListEntries ')' { $$ = $2 }
+    ;
+
+ListEntries
+    : %empty { $$ = Exp(std::vector<Exp>{}) }
+    | ListEntries Exp { $1.list.push_back($2); $$ = $1 }
+    ;
+

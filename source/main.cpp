@@ -5,8 +5,8 @@
 auto main() -> int {
     const std::string PROGRAM = R"(
 
-        printf "Value: %d" 2025
-        
+        (fprint "Value: %d\n" 418)
+
     )";
 
     MorningLanguageLLVM morning_vm;

@@ -12,11 +12,14 @@
 #include "llvm/IR/LLVMContext.h"	            // Compilation environment isolation
 #include "llvm/IR/Module.h"	                    // Code container (like a source file)
 
+#include "parser/MorningLangGrammar.h"          // Grammatic Parser
+
 // Standard libraries
 #include <memory>	                            // Smart pointers
 #include <string>	                            // String handling
 #include <system_error>                         // Use system errors (providers error code)
 #include <vector>                               // Use vectors
+#include <regex>                                // Use regex expressions
 
 /**
  * @class MorningLanguageLLVM
@@ -36,7 +39,7 @@ class MorningLanguageLLVM {
      * 2. A notebook (Module) to write our code in
      * 3. A pen (IRBuilder) to write instructions
      */
-    MorningLanguageLLVM() {
+    MorningLanguageLLVM() : m_PARSER(std::make_unique<syntax::MorningLangGrammar>()) {
         initialize_module();
         setup_extern_functions();
     }
@@ -50,11 +53,14 @@ class MorningLanguageLLVM {
      * 2. Print IR to console for debugging
      * 3. Save IR to file for later use
      */
-    auto execute(const std::string& /*program*/) -> int {
-        generate_ir();
-        llvm::verifyModule(*m_MODULE, &llvm::errs());
+    auto execute(const std::string& program) -> int {
+        auto ast = m_PARSER->parse(program);
 
+        generate_ir(ast);
+
+        llvm::verifyModule(*m_MODULE, &llvm::errs());
         m_MODULE->print(llvm::outs(), nullptr);	   // Like cout for LLVM
+
         save_module_to_file("./out.ll");
 
         return 0;
@@ -95,6 +101,8 @@ class MorningLanguageLLVM {
      */
     std::unique_ptr<llvm::IRBuilder<>> m_IR_BUILDER;
 
+    std::unique_ptr<syntax::MorningLangGrammar> m_PARSER;
+
     /**
      * @brief Builds the LLVM IR structure
      *
@@ -103,7 +111,7 @@ class MorningLanguageLLVM {
      * 2. Generate return value (hardcoded 42)
      * 3. Insert return instruction
      */
-    void generate_ir() {
+    void generate_ir(const Exp& ast) {
         // Create function type: i32 main()
         auto* main_type =
             llvm::FunctionType::get(m_IR_BUILDER->getInt64Ty(),	        // Return type = 32-bit integer
@@ -113,18 +121,9 @@ class MorningLanguageLLVM {
 
         m_ACTIVE_FUNCTION = create_function("main", main_type);
 
-        generate_expression();
+        generate_expression(ast);
 
         m_IR_BUILDER->CreateRet(m_IR_BUILDER->getInt64(0));
-
-        // llvm::Value* result = generate_expression();
-
-        // auto *i32_result = m_IR_BUILDER->CreatePtrToInt(
-        //     result,
-        //     m_IR_BUILDER->getInt64Ty()
-        // );
-
-        // m_IR_BUILDER->CreateRet(i32_result);	// Insert return instruction
     }
 
     /**
@@ -136,18 +135,36 @@ class MorningLanguageLLVM {
      * - Values are immutable (can't change)
      * - %1 = add i32 %0, 1 (typical SSA form)
      */
-    auto generate_expression() -> llvm::Value* {
-        // // Current simplification: Always returns EXAMPLE_MAGIC_NUMBER
-        // const int EXAMPLE_MAGIC_NUMBER = 42;
+    auto generate_expression(const Exp& exp) -> llvm::Value* {
+        switch (exp.type) {
+            case ExpType::NUMBER: return m_IR_BUILDER->getInt64(exp.number);
+            case ExpType::STRING: {
+                auto regex_newline = std::regex("\\\\n");
+                auto str = std::regex_replace(exp.string, regex_newline, "\n");
+                return m_IR_BUILDER->CreateGlobalStringPtr(str);
+            }
+            case ExpType::SYMBOL: return m_IR_BUILDER->getInt64(0);
+            case ExpType::LIST:
+                auto tag = exp.list[0];
 
-        // return m_IR_BUILDER->getInt32(EXAMPLE_MAGIC_NUMBER);	  // Create constant int32
-        auto *str = m_IR_BUILDER->CreateGlobalStringPtr("Hello\n");
+                if (tag.type == ExpType::SYMBOL) {
+                    auto oper = tag.string;
 
-        auto *printf_function = m_MODULE->getFunction("printf");
+                    if (oper == "fprint") {
+                        auto *printf_function = m_MODULE->getFunction("printf");
+                        std::vector<llvm::Value*> args{};
 
-        std::vector<llvm::Value*> args{str};
+                        for (auto i = 1; i < exp.list.size(); ++i) {
+                            args.push_back(generate_expression(exp.list[i]));
+                        }
 
-        return m_IR_BUILDER->CreateCall(printf_function, args);
+                        return m_IR_BUILDER->CreateCall(printf_function, args);
+                    }
+                }
+            break;
+        }
+
+        return m_IR_BUILDER->getInt64(0);
     }
 
     /**

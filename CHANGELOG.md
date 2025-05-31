@@ -1,3 +1,9 @@
+commit 8d6551b3840e3dda430dcacb4c1c7db8e3fe156f
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Sun Jun 1 03:30:01 2025 +0700
+
+    update changelog
+
 commit 5ff7528960c3a1eb121535d1b8592408d588d167
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Sat May 31 23:06:03 2025 +0700

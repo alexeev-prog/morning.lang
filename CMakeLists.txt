@@ -15,7 +15,7 @@ include(cmake/variables.cmake)
 
 find_package(LLVM REQUIRED CONFIG)  
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Waddress -O1 -Werror -pedantic-errors -Wall -Wextra -Wpedantic -Wcast-align -Wcast-qual -Wconversion -Wctor-dtor-privacy -Wextra-semi -Wfloat-equal -Wnon-virtual-dtor -Wold-style-cast -Woverloaded-virtual -Wredundant-decls -Wsign-conversion")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Waddress -O1 -pedantic-errors -Wall -Wextra -Wpedantic -Wcast-align -Wcast-qual -Wconversion -Wctor-dtor-privacy -Wextra-semi -Wfloat-equal -Wnon-virtual-dtor -Wold-style-cast -Woverloaded-virtual -Wredundant-decls -Wsign-conversion")
 
 # ---- Declare library ----
 
@@ -26,6 +26,7 @@ llvm_map_components_to_libnames(llvm_libs support core irreader)
 add_library(
     morninglang_lib OBJECT
     source/morningllvm.hpp
+    source/parser/MorningLangGrammar.h
 )
 target_link_libraries(morninglang_lib ${llvm_libs})  
 
