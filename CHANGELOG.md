@@ -1,3 +1,9 @@
+commit 5ff7528960c3a1eb121535d1b8592408d588d167
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Sat May 31 23:06:03 2025 +0700
+
+    improve build system
+
 commit 6db62d35e47ef8c3c3d95438b7c6339ee10a2f25
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Sat May 31 05:08:38 2025 +0700
