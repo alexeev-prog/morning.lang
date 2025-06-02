@@ -1,3 +1,21 @@
+commit 461adb882c21880afce39f87f40edba6bb4e40dd
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Mon Jun 2 07:24:37 2025 +0700
+
+    fix grammar and add global variables
+
+commit 1b56dd64bf7fc2ca4862fb107394a86cfe712c36
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Mon Jun 2 05:56:26 2025 +0700
+
+    fix bnf
+
+commit 2f6269e7cb32bbc55b20979bccee5ae91b2b98de
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Sun Jun 1 06:38:46 2025 +0700
+
+    add bnf grammatic, improve generating expressions
+
 commit 8d6551b3840e3dda430dcacb4c1c7db8e3fe156f
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Sun Jun 1 03:30:01 2025 +0700

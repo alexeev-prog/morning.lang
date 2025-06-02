@@ -17,12 +17,27 @@
 #include "parser/MorningLangGrammar.h"          // Grammatic Parser
 
 // Standard libraries
-#include <algorithm>
 #include <memory>	                            // Smart pointers
 #include <string>	                            // String handling
 #include <system_error>                         // Use system errors (providers error code)
 #include <vector>                               // Use vectors
 #include <regex>                                // Use regex expressions
+
+/**
+ * @brief Replace regex in string
+ *
+ * @param str string for replacing text in string by regex templates
+ * @return std::string
+ **/
+auto replace_regex_in_string(const std::string& str) -> std::string {
+    auto regex_newline = std::regex("\\\\n");
+    auto regex_tab = std::regex("\\\\t");
+
+    auto newlined = std::regex_replace(str, regex_newline, "\n");
+    auto tabed = std::regex_replace(newlined, regex_tab, "\t");
+
+    return newlined;
+}
 
 /**
  * @class MorningLanguageLLVM
@@ -166,8 +181,8 @@ class MorningLanguageLLVM {
         switch (exp.type) {
             case ExpType::NUMBER: return m_IR_BUILDER->getInt64(exp.number);
             case ExpType::STRING: {
-                auto regex_newline = std::regex("\\\\n");
-                auto str = std::regex_replace(exp.string, regex_newline, "\n");
+                auto str = replace_regex_in_string(exp.string);
+
                 return m_IR_BUILDER->CreateGlobalStringPtr(str);
             }
             case ExpType::SYMBOL:
@@ -175,7 +190,6 @@ class MorningLanguageLLVM {
                     return m_IR_BUILDER->getInt64(static_cast<uint64_t>(exp.string == "true"));
                 } else {
                     return m_MODULE->getNamedGlobal(exp.string)->getInitializer();
-                    // return m_IR_BUILDER->getInt64(0);
                 }
             case ExpType::LIST:
                 auto tag = exp.list[0];
@@ -208,6 +222,8 @@ class MorningLanguageLLVM {
                         return m_IR_BUILDER->CreateCall(printf_function, args);
                     }
                 }
+
+                return m_IR_BUILDER->getInt64(0);
             break;
         }
 
