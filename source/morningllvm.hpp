@@ -4,8 +4,10 @@
 #include <llvm/IR/BasicBlock.h>	                // Code blocks without branches
 #include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/Function.h>	                // Function representation
+#include <llvm/IR/GlobalVariable.h>
 #include <llvm/IR/Value.h>
 #include <llvm/IR/Verifier.h>	                // IR validity checks
+#include <llvm/Support/Alignment.h>
 #include <llvm/Support/raw_ostream.h>	        // Output handling
 
 #include "llvm/IR/IRBuilder.h"	                // Intermediate Representation (IR) construction
@@ -15,6 +17,7 @@
 #include "parser/MorningLangGrammar.h"          // Grammatic Parser
 
 // Standard libraries
+#include <algorithm>
 #include <memory>	                            // Smart pointers
 #include <string>	                            // String handling
 #include <system_error>                         // Use system errors (providers error code)
@@ -121,9 +124,33 @@ class MorningLanguageLLVM {
 
         m_ACTIVE_FUNCTION = create_function("main", main_type);
 
+        create_global_variable("_MORNING_VERSION", m_IR_BUILDER->getInt64(1));
+
         generate_expression(ast);
 
         m_IR_BUILDER->CreateRet(m_IR_BUILDER->getInt64(0));
+    }
+
+    /**
+     * @brief Create a global variable object
+     *
+     * Global variables allocated outside of any function, stored in the binary file mutable, but can have
+     * only constant initializers.
+     *
+     * @param name variable name
+     * @param init_value initializer of variable
+     * @return llvm::GlobalVariable*
+     **/
+    auto create_global_variable(const std::string& name, llvm::Constant* init_value, bool is_mutable = false) -> llvm::GlobalVariable* {
+        m_MODULE->getOrInsertGlobal(name, init_value->getType());
+
+        auto *variable = m_MODULE->getNamedGlobal(name);
+
+        variable->setAlignment(llvm::MaybeAlign(4));
+        variable->setConstant(!is_mutable);
+        variable->setInitializer(init_value);
+
+        return variable;
     }
 
     /**
@@ -143,12 +170,32 @@ class MorningLanguageLLVM {
                 auto str = std::regex_replace(exp.string, regex_newline, "\n");
                 return m_IR_BUILDER->CreateGlobalStringPtr(str);
             }
-            case ExpType::SYMBOL: return m_IR_BUILDER->getInt64(0);
+            case ExpType::SYMBOL:
+                if (exp.string == "true" || exp.string == "false") {
+                    return m_IR_BUILDER->getInt64(static_cast<uint64_t>(exp.string == "true"));
+                } else {
+                    return m_MODULE->getNamedGlobal(exp.string)->getInitializer();
+                    // return m_IR_BUILDER->getInt64(0);
+                }
             case ExpType::LIST:
                 auto tag = exp.list[0];
 
                 if (tag.type == ExpType::SYMBOL) {
                     auto oper = tag.string;
+
+                    if (oper == "var") {
+                        auto var_name = exp.list[1].string;
+                        auto *init = generate_expression(exp.list[2]);
+
+                        return create_global_variable(var_name, static_cast<llvm::Constant*>(init))->getInitializer();
+                    }
+
+                    if (oper == "mutvar") {
+                        auto var_name = exp.list[1].string;
+                        auto *init = generate_expression(exp.list[2]);
+
+                        return create_global_variable(var_name, static_cast<llvm::Constant*>(init), /*is_mutable=*/true)->getInitializer();
+                    }
 
                     if (oper == "fprint") {
                         auto *printf_function = m_MODULE->getFunction("printf");

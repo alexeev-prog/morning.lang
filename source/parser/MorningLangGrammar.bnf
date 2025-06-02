@@ -29,7 +29,6 @@
 
 enum class ExpType {
     NUMBER,
-    BOOLEAN,
     STRING,
     SYMBOL,
     LIST

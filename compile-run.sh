@@ -7,4 +7,4 @@ lli ./out.ll
 echo $?
 
 # Uncomment if you wanna binary file
-clang out.ll -o out.bin
+# clang out.ll -o out.bin
