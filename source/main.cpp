@@ -4,7 +4,7 @@
 
 auto main() -> int {
     const std::string PROGRAM = R"(
-        (fprint "Program Version: %d\n\n" _MORNING_VERSION)
+        (fprint "Program Version: %f\n\n" (var VERSION 1.12))
     )";
 
     MorningLanguageLLVM morning_vm;

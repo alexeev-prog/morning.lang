@@ -9,6 +9,7 @@
 #include <llvm/IR/Verifier.h>	                // IR validity checks
 #include <llvm/Support/Alignment.h>
 #include <llvm/Support/raw_ostream.h>	        // Output handling
+#include "llvm/IR/Constants.h"
 
 #include "llvm/IR/IRBuilder.h"	                // Intermediate Representation (IR) construction
 #include "llvm/IR/LLVMContext.h"	            // Compilation environment isolation
@@ -180,6 +181,7 @@ class MorningLanguageLLVM {
     auto generate_expression(const Exp& exp) -> llvm::Value* {
         switch (exp.type) {
             case ExpType::NUMBER: return m_IR_BUILDER->getInt64(exp.number);
+            case ExpType::FRACTIONAL: return llvm::ConstantFP::get(m_IR_BUILDER->getDoubleTy(), exp.fractional);
             case ExpType::STRING: {
                 auto str = replace_regex_in_string(exp.string);
 

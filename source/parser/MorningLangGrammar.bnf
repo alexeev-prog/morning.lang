@@ -14,6 +14,10 @@
 \/\/.*                          %empty
 \/\*[\s\S]*?\*\/                %empty
 
+\d+\.\d*([eE][-+]?\d+)?         FRACTIONAL
+\.\d+([eE][-+]?\d+)?            FRACTIONAL
+\d+[eE][-+]?\d+                 FRACTIONAL
+
 \s+                             %empty
 \d+                             NUMBER
 \"[^\"]*\"                      STRING
@@ -29,20 +33,25 @@
 
 enum class ExpType {
     NUMBER,
+    FRACTIONAL,
     STRING,
     SYMBOL,
-    LIST
+    LIST,
 };
 
 struct Exp {
     ExpType type;
 
     int number;
+    double fractional;
     std::string string;
     std::vector<Exp> list;
 
     // Numbers
     Exp(int number) : type(ExpType::NUMBER), number(number) {}
+
+    // Fractional (double)
+    Exp(double fractional) : type(ExpType::FRACTIONAL), fractional(fractional) {}
 
     // Strings&symbols
     Exp(std::string& str_value) {
@@ -72,6 +81,7 @@ Exp
 
 Atom
     : NUMBER { $$ = Exp(std::stoi($1)) }
+    | FRACTIONAL { $$ = Exp(std::stod($1)) }
     | STRING { $$ = Exp($1) }
     | SYMBOL { $$ = Exp($1) }
     ;
