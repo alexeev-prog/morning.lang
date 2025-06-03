@@ -30,14 +30,14 @@
  * @param str string for replacing text in string by regex templates
  * @return std::string
  **/
-auto replace_regex_in_string(const std::string& str) -> std::string {
+inline auto replace_regex_in_string(const std::string& str) -> std::string {
     auto regex_newline = std::regex("\\\\n");
     auto regex_tab = std::regex("\\\\t");
 
     auto newlined = std::regex_replace(str, regex_newline, "\n");
     auto tabed = std::regex_replace(newlined, regex_tab, "\t");
 
-    return newlined;
+    return tabed;
 }
 
 /**
