@@ -453,8 +453,8 @@ return TokenType::SYMBOL;
 
 // clang-format off
 std::array<LexRule, Tokenizer::LEX_RULES_COUNT> Tokenizer::lexRules_ = {{
-  {std::regex(R"(^\()"), &_lexRule1},
-  {std::regex(R"(^\))"), &_lexRule2},
+  {std::regex(R"(^\[)"), &_lexRule1},
+  {std::regex(R"(^\])"), &_lexRule2},
   {std::regex(R"(^\/\/.*)"), &_lexRule3},
   {std::regex(R"(^\/\*[\s\S]*?\*\/)"), &_lexRule4},
   {std::regex(R"(^\d+\.\d*([eE][-+]?\d+)?)"), &_lexRule5},

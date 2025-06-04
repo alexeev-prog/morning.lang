@@ -1,3 +1,15 @@
+commit d55647eb5d431c41dcd8870c8d2b64b254ab02b3
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Wed Jun 4 06:17:23 2025 +0700
+
+    fix bugs
+
+commit 7cc8e62daa37cb3b6b6fe1675cd1bacb968c1d7b
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Tue Jun 3 08:08:01 2025 +0700
+
+    add fractional numbers
+
 commit 7a85a5a3aedc234eb855c349e8c8ec352c6acc17
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Tue Jun 3 05:52:01 2025 +0700
