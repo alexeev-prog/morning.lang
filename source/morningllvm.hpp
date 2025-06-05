@@ -30,6 +30,13 @@
 #include <utility>
 #include <vector>    // Use vectors
 
+#define GEN_BINARY_OP(Op, varName)                                              \
+    do {                                                                        \
+        auto oper1 = generate_expression(exp.list[1], env);                     \
+        auto oper2 = generate_expression(exp.list[2], env);                     \
+        return m_IR_BUILDER->Op(oper1, oper2, varName);                         \
+    } while(false)
+
 using env = std::shared_ptr<Environment>;
 
 /**
@@ -214,6 +221,21 @@ class MorningLanguageLLVM {
         return variable;
     }
 
+    /**
+     * @brief Get the type by name
+     *
+     * !int/!int64 - 64bit integer
+     * !int32 - 32bit integer
+     * !int16 - 16bit integer
+     * !int8 - 8bit integer
+     * !str - string
+     * !frac - fractional (double) number
+     * !bool - basic integer
+     * Otherwise: 64bit intger
+     *
+     * @param type_string
+     * @return llvm::Type*
+     **/
     auto get_type(const std::string& type_string) -> llvm::Type* {
         if (type_string == "!int" || type_string == "!int64") {
             return m_IR_BUILDER->getInt64Ty();
@@ -246,14 +268,30 @@ class MorningLanguageLLVM {
         return m_IR_BUILDER->getInt64Ty();
     }
 
-    auto extract_var_type(const Exp& exp) {
+    /**
+     * @brief Extract var type
+     *
+     * @param exp exp token
+     * @return llvm::Type* var type
+     **/
+    auto extract_var_type(const Exp& exp) -> llvm::Type* {
         return exp.type == ExpType::LIST ? get_type(exp.list[1].string) : m_IR_BUILDER->getInt64Ty();
     }
 
-    auto alloc_var(const std::string& name, llvm::Type* type_string, const env& env) -> llvm::Value* {
+    /**
+     * @brief Allocate a variable
+     *
+     * @param name variable name
+     * @param var_type variable type
+     * @param env variables environment
+     * @return llvm::Value* allocated var
+     **/
+    auto alloc_var(const std::string& name, llvm::Type* var_type, const env& env) -> llvm::Value* {
+        LOG_TRACE
+
         m_VARS_BUILDER->SetInsertPoint(&m_ACTIVE_FUNCTION->getEntryBlock());
 
-        auto* allocated_var = m_VARS_BUILDER->CreateAlloca(type_string, nullptr, name);
+        auto* allocated_var = m_VARS_BUILDER->CreateAlloca(var_type, nullptr, name);
 
         env->define(name, allocated_var);
 
@@ -306,6 +344,28 @@ class MorningLanguageLLVM {
 
                 if (tag.type == ExpType::SYMBOL) {
                     auto oper = tag.string;
+
+                    if (oper == "+" || oper == "__PLUS_OPERAND__") {
+                        GEN_BINARY_OP(CreateAdd, "__tmpadd__");
+                    } else if (oper == "-" || oper == "__SUB_OPERAND__") {
+                        GEN_BINARY_OP(CreateSub, "__tmpsub__");
+                    } else if (oper == "*" || oper == "__MUL_OPERAND__") {
+                        GEN_BINARY_OP(CreateMul, "__tmpmul__");
+                    } else if (oper == "/" || oper == "__DIV_OPERAND__") {
+                        GEN_BINARY_OP(CreateSDiv, "__tmpdiv__");
+                    } else if (oper == ">" || oper == "__DIV_CMPG__") {
+                        GEN_BINARY_OP(CreateICmpUGT, "__tmpcmp__");
+                    } else if (oper == "==" || oper == "__DIV_CMPEQ__") {
+                        GEN_BINARY_OP(CreateICmpEQ, "__tmpcmp__");
+                    } else if (oper == "<" || oper == "__DIV_CMPL__") {
+                        GEN_BINARY_OP(CreateICmpULT, "__tmpcmp__");
+                    } else if (oper == "!=" || oper == "__DIV_CMPNE__") {
+                        GEN_BINARY_OP(CreateICmpNE, "__tmpcmp__");
+                    } else if (oper == ">=" || oper == "__DIV_CMPGE__") {
+                        GEN_BINARY_OP(CreateICmpUGE, "__tmpcmp__");
+                    } else if (oper == "<=" || oper == "__DIV_CMPLE__") {
+                        GEN_BINARY_OP(CreateICmpULE, "__tmpcmp__");
+                    }
 
                     if (oper == "set") {
                         auto* value = generate_expression(exp.list[2], env);

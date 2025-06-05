@@ -4,20 +4,14 @@
 
 auto main() -> int {
     const std::string PROGRAM = R"(
-[var [ALPHA !int] 42]
+[var x (+ 100 1)]
 
-[scope
-    [var [ALPHA !string] "Hello"]
-    [fprint "ALPHA: %s\n" ALPHA]]
+// [condition (== x 101)]
+//     [set x 202]
+//     [set x 303]]
 
-[fprint "ALPHA: %d\n" ALPHA]
-
-[set ALPHA 100]
-
-[fprint "ALPHA: %d\n" ALPHA]
-
-[fprint "_VERSION: %d\n\n" _VERSION]
-
+[fprint "X: %d\n" x]
+[fprint "X is 101? %d\n\n" (== x 101)]
     )";
 
     MorningLanguageLLVM morning_vm;

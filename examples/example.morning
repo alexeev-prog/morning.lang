@@ -1,9 +1,13 @@
+[var [ALPHA !int] 42]
 
-function orint_hello_world(string text): none -> {
-    printline("Hello, %s", text);
-}
+[scope
+    [var [ALPHA !string] "Hello"]
+    [fprint "ALPHA: %s\n" ALPHA]]
 
-entrypoint main() {
-    print_hello_world("world");
-    return 0;
-}
+[fprint "ALPHA: %d\n" ALPHA]
+
+[set ALPHA 100]
+
+[fprint "ALPHA: %d\n" ALPHA]
+
+[fprint "_VERSION: %d\n\n" _VERSION]

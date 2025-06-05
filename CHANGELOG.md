@@ -1,3 +1,9 @@
+commit 183205d44876c55b44b41a3fda94433cb4f9dcb5
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Thu Jun 5 07:23:52 2025 +0700
+
+    add local variables & local environment, add new operand `set`, remove mutvar
+
 commit 955346321b207e38455fb2ff25d494b27ac2e468
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Wed Jun 4 07:22:22 2025 +0700
