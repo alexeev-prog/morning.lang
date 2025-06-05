@@ -1,3 +1,9 @@
+commit 955346321b207e38455fb2ff25d494b27ac2e468
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Wed Jun 4 07:22:22 2025 +0700
+
+    feat: add Global Environment, logger and tracelogger
+
 commit d55647eb5d431c41dcd8870c8d2b64b254ab02b3
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Wed Jun 4 06:17:23 2025 +0700

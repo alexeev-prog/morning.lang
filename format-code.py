@@ -13,7 +13,7 @@ NC = '\033[0m'  # No Color
 BOLD = '\033[1m'  # No Color
 
 # File Extension filter. You can add new extension 
-cpp_extensions = (".cxx",".cpp",".c", ".hxx", ".hh", ".cc", ".hpp") 
+cpp_extensions = (".cxx",".cpp",".c", ".hxx", ".hh", ".cc", ".hpp", ".h") 
 IGNORED_DIRS = ['build', '.git', 'cmake', 'docs', 'utils', 'CMakeFiles']
 
 CLANG_FORMAT = 'clang-format'

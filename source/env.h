@@ -2,42 +2,42 @@
 
 #include <map>
 #include <memory>
-#include <utility>
 #include <string>
-#include "llvm/IR/Value.h"
+#include <utility>
 
+#include "llvm/IR/Value.h"
 #include "logger.h"
 
 class Environment : public std::enable_shared_from_this<Environment> {
-    public:
-        Environment(std::map<std::string, llvm::Value*> record,
-                    std::shared_ptr<Environment> parent)
-                    : m_RECORD(std::move(record)), m_PARENT(std::move(parent)) {}
+  public:
+    Environment(std::map<std::string, llvm::Value*> record, std::shared_ptr<Environment> parent)
+        : m_RECORD(std::move(record))
+        , m_PARENT(std::move(parent)) {}
 
-        llvm::Value* define(const std::string& var_name, llvm::Value* value) {
-            m_RECORD[var_name] = value;
+    auto define(const std::string& var_name, llvm::Value* value) -> llvm::Value* {
+        m_RECORD[var_name] = value;
 
-            return value;
+        return value;
+    }
+
+    auto lookup_by_name(const std::string& var_name) -> llvm::Value* {
+        return resolve(var_name)->m_RECORD[var_name];
+    }
+
+  private:
+    auto resolve(const std::string& name) -> std::shared_ptr<Environment> {
+        if (m_RECORD.count(name) != 0) {
+            return shared_from_this();
         }
 
-        llvm::Value* lookup_by_name(const std::string& var_name) {
-            return resolve(var_name)->m_RECORD[var_name];
+        if (m_PARENT == nullptr) {
+            DIE << "Varible \"" << name << "\" is not defined.\n";
         }
 
-    private:
-        std::shared_ptr<Environment> resolve(const std::string& name) {
-            if (m_RECORD.count(name) != 0) {
-                return shared_from_this();
-            }
+        return m_PARENT->resolve(name);
+    }
 
-            if (m_PARENT == nullptr) {
-                DIE << "Varible \"" << name << "\" is not defined.\n";
-            }
+    std::map<std::string, llvm::Value*> m_RECORD;
 
-            return m_PARENT->resolve(name);
-        }
-
-        std::map<std::string, llvm::Value*> m_RECORD;
-
-        std::shared_ptr<Environment> m_PARENT;
+    std::shared_ptr<Environment> m_PARENT;
 };

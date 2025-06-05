@@ -4,14 +4,19 @@
 
 auto main() -> int {
     const std::string PROGRAM = R"(
-        // [var ALPHA 42]
+[var [ALPHA !int] 42]
 
-        // [scope
-        //     [var ALPHA "Hello"]
-        //     [fprint "A: %s\n" ALPHA]
-        // ]
+[scope
+    [var [ALPHA !string] "Hello"]
+    [fprint "ALPHA: %s\n" ALPHA]]
 
-        [fprint "_VERSION: %d\n\n" _VERSION]
+[fprint "ALPHA: %d\n" ALPHA]
+
+[set ALPHA 100]
+
+[fprint "ALPHA: %d\n" ALPHA]
+
+[fprint "_VERSION: %d\n\n" _VERSION]
 
     )";
 
