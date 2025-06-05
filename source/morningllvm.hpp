@@ -147,12 +147,30 @@ class MorningLanguageLLVM {
      */
     std::unique_ptr<llvm::IRBuilder<>> m_IR_BUILDER;
 
+    /**
+     * @brief Morning language parser
+     *
+     * This is Morning Language Syntax Parser
+     **/
     std::unique_ptr<syntax::MorningLangGrammar> m_PARSER;
 
+    /**
+     * @brief Global Environment
+     *
+     * This is global program environment
+     **/
     std::shared_ptr<Environment> m_GLOBAL_ENV;
 
+    /**
+     * @brief IR Builder for vars
+     *
+     * Tool for writing LLVM Vars instructions
+     **/
     std::unique_ptr<llvm::IRBuilder<>> m_VARS_BUILDER;
 
+    /**
+     * @brief Set the up global environment
+     **/
     void setup_global_environment() {
         LOG_TRACE
 
@@ -162,7 +180,7 @@ class MorningLanguageLLVM {
 
         std::map<std::string, llvm::Value*> global_rec {};
 
-        for (auto& entry : global_object) {
+        for (const auto& entry : global_object) {
             global_rec[entry.first] = create_global_variable(entry.first, (llvm::Constant*)entry.second);
         }
 
@@ -265,6 +283,10 @@ class MorningLanguageLLVM {
             return m_IR_BUILDER->getInt64Ty();
         }
 
+        if (type_string == "!none") {
+            return m_IR_BUILDER->getVoidTy();
+        }
+
         return m_IR_BUILDER->getInt64Ty();
     }
 
@@ -353,17 +375,17 @@ class MorningLanguageLLVM {
                         GEN_BINARY_OP(CreateMul, "__tmpmul__");
                     } else if (oper == "/" || oper == "__DIV_OPERAND__") {
                         GEN_BINARY_OP(CreateSDiv, "__tmpdiv__");
-                    } else if (oper == ">" || oper == "__DIV_CMPG__") {
+                    } else if (oper == ">" || oper == "__CMPG__") {
                         GEN_BINARY_OP(CreateICmpUGT, "__tmpcmp__");
-                    } else if (oper == "==" || oper == "__DIV_CMPEQ__") {
+                    } else if (oper == "==" || oper == "__CMPEQ__") {
                         GEN_BINARY_OP(CreateICmpEQ, "__tmpcmp__");
-                    } else if (oper == "<" || oper == "__DIV_CMPL__") {
+                    } else if (oper == "<" || oper == "__CMPL__") {
                         GEN_BINARY_OP(CreateICmpULT, "__tmpcmp__");
-                    } else if (oper == "!=" || oper == "__DIV_CMPNE__") {
+                    } else if (oper == "!=" || oper == "__CMPNE__") {
                         GEN_BINARY_OP(CreateICmpNE, "__tmpcmp__");
-                    } else if (oper == ">=" || oper == "__DIV_CMPGE__") {
+                    } else if (oper == ">=" || oper == "__CMPGE__") {
                         GEN_BINARY_OP(CreateICmpUGE, "__tmpcmp__");
-                    } else if (oper == "<=" || oper == "__DIV_CMPLE__") {
+                    } else if (oper == "<=" || oper == "__CMPLE__") {
                         GEN_BINARY_OP(CreateICmpULE, "__tmpcmp__");
                     }
 
