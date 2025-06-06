@@ -1,0 +1,8 @@
+[var a 10]
+
+[while (> a 0)
+    [scope
+        [set a (- a 1)]
+        [fprint "%d " a]]]
+
+[fprint "\nA: %d\n\n" a]

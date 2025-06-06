@@ -1,0 +1,11 @@
+[var b 100]
+
+[var a (+ b 1)]
+
+[check (== a 101)
+    [check (> a 100)
+        [set a 1000]
+        [set a -1]]
+    [set a 0]]
+
+[fprint "A: %d\n\n" a]

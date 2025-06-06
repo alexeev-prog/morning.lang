@@ -469,11 +469,11 @@ std::array<LexRule, Tokenizer::LEX_RULES_COUNT> Tokenizer::lexRules_ = {{
   {std::regex(R"(^\))"), &_lexRule4},
   {std::regex(R"(^\/\/.*)"), &_lexRule5},
   {std::regex(R"(^\/\*[\s\S]*?\*\/)"), &_lexRule6},
-  {std::regex(R"(^\d+\.\d*([eE][-+]?\d+)?)"), &_lexRule7},
-  {std::regex(R"(^\.\d+([eE][-+]?\d+)?)"), &_lexRule8},
-  {std::regex(R"(^\d+[eE][-+]?\d+)"), &_lexRule9},
+  {std::regex(R"(^[-+]?\d+\.\d*([eE][-+]?\d+)?)"), &_lexRule7},
+  {std::regex(R"(^[-+]?\.\d+([eE][-+]?\d+)?)"), &_lexRule8},
+  {std::regex(R"(^[-+]?\d+[eE][-+]?\d+)"), &_lexRule9},
   {std::regex(R"(^\s+)"), &_lexRule10},
-  {std::regex(R"(^\d+)"), &_lexRule11},
+  {std::regex(R"(^[-+]?\d+)"), &_lexRule11},
   {std::regex(R"(^"[^\"]*")"), &_lexRule12},
   {std::regex(R"(^[\w\-+*=!<>/]+)"), &_lexRule13}
 }};

@@ -389,13 +389,76 @@ class MorningLanguageLLVM {
                         GEN_BINARY_OP(CreateICmpULE, "__tmpcmp__");
                     }
 
+                    if (oper == "while") {
+                        auto* condition_block = create_basic_block("cond", m_ACTIVE_FUNCTION);
+                        m_IR_BUILDER->CreateBr(condition_block);
+
+                        auto* body_block = create_basic_block("body");
+                        auto* loop_end_block = create_basic_block("loopend");
+
+                        m_IR_BUILDER->SetInsertPoint(condition_block);
+                        auto* condition = generate_expression(exp.list[1], env);
+
+                        m_IR_BUILDER->CreateCondBr(condition, body_block, loop_end_block);
+
+                        m_ACTIVE_FUNCTION->insert(m_ACTIVE_FUNCTION->end(), body_block);
+                        m_IR_BUILDER->SetInsertPoint(body_block);
+                        generate_expression(exp.list[2], env);
+                        m_IR_BUILDER->CreateBr(condition_block);
+
+                        m_ACTIVE_FUNCTION->insert(m_ACTIVE_FUNCTION->end(), loop_end_block);
+                        m_IR_BUILDER->SetInsertPoint(loop_end_block);
+
+                        return m_IR_BUILDER->getInt64(0);
+                    }
+
+                    if (oper == "check") {
+                        auto* condition = generate_expression(exp.list[1], env);
+
+                        auto* then_block = create_basic_block("then", m_ACTIVE_FUNCTION);
+
+                        auto* else_block = create_basic_block("else");
+                        auto* if_end_block = create_basic_block("ifend");
+
+                        // Condition branch
+                        m_IR_BUILDER->CreateCondBr(condition, then_block, else_block);
+
+                        // Then branch
+                        m_IR_BUILDER->SetInsertPoint(then_block);
+                        auto* then_res = generate_expression(exp.list[2], env);
+                        m_IR_BUILDER->CreateBr(if_end_block);
+
+                        then_block = m_IR_BUILDER->GetInsertBlock();
+
+                        // Else branch
+                        m_ACTIVE_FUNCTION->insert(m_ACTIVE_FUNCTION->end(), else_block);
+                        m_IR_BUILDER->SetInsertPoint(else_block);
+                        auto* else_res = generate_expression(exp.list[3], env);
+                        m_IR_BUILDER->CreateBr(if_end_block);
+                        else_block = m_IR_BUILDER->GetInsertBlock();
+
+                        // If-end block
+                        m_ACTIVE_FUNCTION->insert(m_ACTIVE_FUNCTION->end(), if_end_block);
+                        m_IR_BUILDER->SetInsertPoint(if_end_block);
+
+                        // Result of the check expressions is phi
+                        auto* phi = m_IR_BUILDER->CreatePHI(then_res->getType(), 2, "__tmpcheck__");
+
+                        phi->addIncoming(then_res, then_block);
+                        phi->addIncoming(else_res, else_block);
+
+                        return phi;
+                    }
+
                     if (oper == "set") {
                         auto* value = generate_expression(exp.list[2], env);
                         auto var_name = exp.list[1].string;
 
                         auto* var_binding = env->lookup_by_name(var_name);
 
-                        return m_IR_BUILDER->CreateStore(value, var_binding);
+                        m_IR_BUILDER->CreateStore(value, var_binding);
+
+                        return value;
                     }
 
                     if (oper == "var") {

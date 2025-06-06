@@ -14,12 +14,12 @@
 \/\/.*                          %empty
 \/\*[\s\S]*?\*\/                %empty
 
-\d+\.\d*([eE][-+]?\d+)?         FRACTIONAL
-\.\d+([eE][-+]?\d+)?            FRACTIONAL
-\d+[eE][-+]?\d+                 FRACTIONAL
+[-+]?\d+\.\d*([eE][-+]?\d+)?    FRACTIONAL
+[-+]?\.\d+([eE][-+]?\d+)?       FRACTIONAL
+[-+]?\d+[eE][-+]?\d+            FRACTIONAL
 
 \s+                             %empty
-\d+                             NUMBER
+[-+]?\d+                        NUMBER
 \"[^\"]*\"                      STRING
 [\w\-+*=!<>/]+                  SYMBOL
 
