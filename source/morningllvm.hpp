@@ -75,8 +75,7 @@ inline auto extract_var_name(const Exp& exp) -> std::string {
  * @return false
  **/
 inline auto has_return_type(const Exp& fn_exp) -> bool {
-    return fn_exp.list[3].type == ExpType::SYMBOL &&
-           fn_exp.list[3].string == "<->";
+    return fn_exp.list[3].type == ExpType::SYMBOL && fn_exp.list[3].string == "<->";
 }
 
 /**
@@ -321,11 +320,10 @@ class MorningLanguageLLVM {
     auto extract_function_type(const Exp& fn_exp) -> llvm::FunctionType* {
         auto params = fn_exp.list[2];
 
-        auto* return_type = has_return_type(fn_exp)
-                                    ? get_type(fn_exp.list[4].string)
-                                    : m_IR_BUILDER->getInt64Ty();
+        auto* return_type =
+            has_return_type(fn_exp) ? get_type(fn_exp.list[4].string) : m_IR_BUILDER->getInt64Ty();
 
-        std::vector<llvm::Type*> param_types{};
+        std::vector<llvm::Type*> param_types {};
 
         for (auto& param : params.list) {
             auto* param_type = extract_var_type(param);
@@ -355,19 +353,19 @@ class MorningLanguageLLVM {
         return allocated_var;
     }
 
-    auto compile_function(const Exp& fn_exp, std::string fn_name, env env) -> llvm::Value* {
+    auto compile_function(const Exp& fn_exp, const std::string& fn_name, const env& env) -> llvm::Value* {
         auto params = fn_exp.list[2];
         auto body = has_return_type(fn_exp) ? fn_exp.list[5] : fn_exp.list[3];
 
         auto* prev_fn = m_ACTIVE_FUNCTION;
         auto* prev_block = m_IR_BUILDER->GetInsertBlock();
 
-        auto new_fn = create_function(fn_name, extract_function_type(fn_exp), env);
+        auto* new_fn = create_function(fn_name, extract_function_type(fn_exp), env);
         m_ACTIVE_FUNCTION = new_fn;
 
         auto idx = 0;
 
-        auto fn_env = std::make_shared<Environment>(std::map<std::string, llvm::Value*>{}, env);
+        auto fn_env = std::make_shared<Environment>(std::map<std::string, llvm::Value*> {}, env);
 
         for (auto& arg : m_ACTIVE_FUNCTION->args()) {
             auto param = params.list[idx++];
@@ -458,7 +456,7 @@ class MorningLanguageLLVM {
                     }
 
                     if (oper == "func") {
-                        return compile_function(exp, /* name */exp.list[1].string, env);
+                        return compile_function(exp, /* name */ exp.list[1].string, env);
                     }
 
                     if (oper == "while") {
@@ -574,13 +572,13 @@ class MorningLanguageLLVM {
 
                     auto* callable = generate_expression(exp.list[0], env);
 
-                    std::vector<llvm::Value*> args{};
+                    std::vector<llvm::Value*> args {};
 
                     for (auto i = 1; i < exp.list.size(); i++) {
                         args.push_back(generate_expression(exp.list[i], env));
                     }
 
-                    auto *fn = (llvm::Function*)callable;
+                    auto* fn = (llvm::Function*)callable;
 
                     return m_IR_BUILDER->CreateCall(fn, args);
                 }
@@ -606,6 +604,8 @@ class MorningLanguageLLVM {
         // int printf(const char* format, ...);
         m_MODULE->getOrInsertFunction("printf",
                                       llvm::FunctionType::get(m_IR_BUILDER->getInt64Ty(), byte_ptr_ty, true));
+
+
     }
 
     /**
