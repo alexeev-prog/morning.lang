@@ -1,3 +1,21 @@
+commit bdcbcfbf0c35f850908d28793f2ba1d028844b27
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Fri Jun 6 07:14:38 2025 +0700
+
+    add check (if-then-else) conditions and while loops
+
+commit 260a4f6ccd75fd6a0a41d0189307c35710fc248d
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Fri Jun 6 02:09:46 2025 +0700
+
+    fix
+
+commit 9ea75fd09000827808b35600776fec310d02c230
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Thu Jun 5 07:45:06 2025 +0700
+
+    add operands: +-*/, and compare operands
+
 commit 183205d44876c55b44b41a3fda94433cb4f9dcb5
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Thu Jun 5 07:23:52 2025 +0700

@@ -30,12 +30,12 @@
 #include <utility>
 #include <vector>    // Use vectors
 
-#define GEN_BINARY_OP(Op, varName)                                              \
-    do {                                                                        \
-        auto oper1 = generate_expression(exp.list[1], env);                     \
-        auto oper2 = generate_expression(exp.list[2], env);                     \
-        return m_IR_BUILDER->Op(oper1, oper2, varName);                         \
-    } while(false)
+#define GEN_BINARY_OP(Op, varName) \
+    do { \
+        auto oper1 = generate_expression(exp.list[1], env); \
+        auto oper2 = generate_expression(exp.list[2], env); \
+        return m_IR_BUILDER->Op(oper1, oper2, varName); \
+    } while (false)
 
 using env = std::shared_ptr<Environment>;
 
@@ -174,13 +174,13 @@ class MorningLanguageLLVM {
     void setup_global_environment() {
         LOG_TRACE
 
-        std::map<std::string, llvm::Value*> const global_object {
+        std::map<std::string, llvm::Value*> const GLOBAL_OBJECT {
             {"_VERSION", m_IR_BUILDER->getInt64(101)},
         };
 
         std::map<std::string, llvm::Value*> global_rec {};
 
-        for (const auto& entry : global_object) {
+        for (const auto& entry : GLOBAL_OBJECT) {
             global_rec[entry.first] = create_global_variable(entry.first, (llvm::Constant*)entry.second);
         }
 
@@ -532,14 +532,15 @@ class MorningLanguageLLVM {
      * 2. Create prototype if needed
      * 3. Prepare first code block
      */
-    auto create_function(const std::string& name, llvm::FunctionType* type, env env) -> llvm::Function* {
+    auto create_function(const std::string& name, llvm::FunctionType* type, const env& env)
+        -> llvm::Function* {
         LOG_TRACE
 
         if (auto* existing = m_MODULE->getFunction(name)) {
             return existing;
         }
 
-        auto* func = create_function_prototype(name, type, std::move(env));
+        auto* func = create_function_prototype(name, type, env);
         setup_function_body(func);
         return func;
     }
