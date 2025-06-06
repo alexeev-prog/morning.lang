@@ -1,7 +1,7 @@
 # ⚙️ morning.lang
-<a id="readme-top"></a> 
+<a id="readme-top"></a>
 
-<div align="center">  
+<div align="center">
   <p align="center">
   Aesthetic programming language in C++ (llvm)
     <br />
@@ -49,6 +49,24 @@ At the core of the MorningLang compiler lies a meticulously crafted hierarchy of
  > [!NOTE]
  > Licensing: [GNU GPL V3](./LICENSE)
 
+Simple example:
+
+```morning
+[var [ALPHA !int] 42]
+
+[scope
+    [var [ALPHA !string] "Hello"]
+    [fprint "ALPHA: %s\n" ALPHA]]
+
+[fprint "ALPHA: %d\n" ALPHA]
+
+[set ALPHA 100]
+
+[fprint "ALPHA: %d\n" ALPHA]
+
+[fprint "_VERSION: %d\n\n" _VERSION]
+```
+
 ## Documentation
 Online docs available on [this link](https://alexeev-prog.github.io/morning.lang/).
 
@@ -65,16 +83,57 @@ Online docs available on [this link](https://alexeev-prog.github.io/morning.lang
 ## Why Use **Morning.lang**? ✨
 
 - **Performance driven:** LLVM-based language, written in C++.
-- **Extensible by design:** Modular, loosely coupled systems; add or replace features gracefully.  
-- **Modern standards:** C++17 compliance ensures clean, maintainable, future-proof code.  
-- **Cross-platform:** Write once, run on Windows, Linux, and macOS seamlessly.  
+- **Extensible by design:** Modular, loosely coupled systems; add or replace features gracefully.
+- **Modern standards:** C++17 compliance ensures clean, maintainable, future-proof code.
+- **Cross-platform:** Write once, run on Windows, Linux, and macOS seamlessly.
 - **Built-in key systems:** Sound, physics, map loading, events right out of the box.
+
+## Examples
+
+ + Conditions
+
+```morning
+[var b 100]
+
+[var a (+ b 1)]
+
+[check (== a 101)
+    [check (> a 100)
+        [set a 1000]
+        [set a -1]]
+    [set a 0]]
+
+[fprint "A: %d\n\n" a]
+```
+
+ + Functions
+
+```
+[func square (x) (* x x)]
+
+[fprint "square 10: %d\n" (square 10)]
+
+[func sum ((first !int) (second !int)) <-> !int (+ first second)]
+
+[fprint "sum 100 1: %d\n\n" (sum 100 1)]
+```
+
+ + While loop
+
+```
+[var a 10]
+
+[while (> a 0)
+    [scope
+        [set a (- a 1)]
+        [fprint "%d " a]]]
+
+[fprint "\nA: %d\n\n" a]
+```
 
 ## Join the Community! 🌐
 
-- **GitHub Issues** — for bug reporting and feature requests. 
+- **GitHub Issues** — for bug reporting and feature requests.
 - **Contact Email** — for direct feedback, suggestions, and collaboration inquiries. (email: `alexeev.dev@mail.ru`. Please insert "Morning.lang Issue" at the beginning of the subject line.)
 
 Thank you for exploring **Morning.lang** — let’s create extraordinary 3D experiences together! 🚀
-
-

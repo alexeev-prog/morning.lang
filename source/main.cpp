@@ -4,14 +4,13 @@
 
 auto main() -> int {
     const std::string PROGRAM = R"(
-[var a 10]
+[func square (x) (* x x)]
 
-[while (> a 0)
-    [scope
-        [set a (- a 1)]
-        [fprint "%d " a]]]
+[fprint "square 10: %d\n" (square 10)]
 
-[fprint "\nA: %d\n\n" a]
+[func sum ((first !int) (second !int)) <-> !int (+ first second)]
+
+[fprint "sum 100 1: %d\n\n" (sum 100 1)]
     )";
 
     MorningLanguageLLVM morning_vm;
