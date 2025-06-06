@@ -1,3 +1,9 @@
+commit 85eed565951ffb72a8113c071461782bb7ac9a69
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Fri Jun 6 07:55:32 2025 +0700
+
+    add functions definition and call, improve readme
+
 commit 6dfea7aeb7848a5543667f3f9f1f50570814a5c1
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Fri Jun 6 07:16:42 2025 +0700
