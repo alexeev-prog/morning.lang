@@ -1,3 +1,9 @@
+commit 3107832d4306701fa819dd1fb33f0c0aa695f369
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Mon Jun 9 00:05:17 2025 +0700
+
+    improve build system, readme, improve syntax
+
 commit c1a7f270646e5c1a39d96d30241ce14cffbc2dc3
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Sun Jun 8 14:47:26 2025 +0700

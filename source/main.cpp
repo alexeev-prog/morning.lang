@@ -6,7 +6,7 @@ auto main() -> int {
     const std::string PROGRAM = R"(
 [func square (x) (* x x)]
 
-[func scoped_function (x) [$>
+[func scoped_function (x) [scope
     [+ x 100]
     [while (> x 0)
         [$>
