@@ -1,3 +1,15 @@
+commit d553538f0ba7193a678133a5eb619dfe0ca2d071
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Sun Jun 8 14:38:42 2025 +0700
+
+    add support for hex, binary, octal numbers and small improve syntax
+
+commit 23ed0bc7969e2a192244bd20fffaeff0648f00ca
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Fri Jun 6 08:44:17 2025 +0700
+
+    small changes
+
 commit 85eed565951ffb72a8113c071461782bb7ac9a69
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Fri Jun 6 07:55:32 2025 +0700
