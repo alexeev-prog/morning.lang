@@ -131,6 +131,21 @@ Online docs available on [this link](https://alexeev-prog.github.io/morning.lang
 [fprint "\nA: %d\n\n" a]
 ```
 
+ + Number systems
+
+```
+[func square (x) (* x x)]
+
+[fprint "square 10: %d\n" (square 10)]
+[fprint "square 0xA: %d\n" (square 0xA)]
+[fprint "square 012: %d\n" (square 012)]
+[fprint "square 0b1010: %d\n" (square 0b1010)]
+
+[func sum ((first !int) (second !int)) -> !int (+ first second)]
+
+[fprint "sum 100 1: %d\n\n" (sum 100 1)]
+```
+
 ## Join the Community! 🌐
 
 - **GitHub Issues** — for bug reporting and feature requests.
