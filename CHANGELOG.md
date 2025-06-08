@@ -1,3 +1,9 @@
+commit c1a7f270646e5c1a39d96d30241ce14cffbc2dc3
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Sun Jun 8 14:47:26 2025 +0700
+
+    small changes in number systems and docs
+
 commit d553538f0ba7193a678133a5eb619dfe0ca2d071
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Sun Jun 8 14:38:42 2025 +0700

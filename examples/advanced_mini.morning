@@ -1,15 +1,9 @@
-#include <string>
-
-#include "morningllvm.hpp"
-
-auto main() -> int {
-    const std::string PROGRAM = R"(
 [func square (x) (* x x)]
 
-[func scoped_function (x) [$>
+[func scoped_function (x) [scope
     [+ x 100]
     [while (> x 0)
-        [$>
+        [scope
             [set x (- x 1)]
             [fprint "%d " x]]]
     ]
@@ -35,11 +29,3 @@ auto main() -> int {
 [func sum ((first !int) (second !int)) -> !int (+ first second)]
 
 [fprint "sum 100 1: %d\n\n" (sum 100 1)]
-    )";
-
-    MorningLanguageLLVM morning_vm;
-
-    morning_vm.execute(PROGRAM);
-
-    return 0;
-}

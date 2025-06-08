@@ -474,6 +474,7 @@ class MorningLanguageLLVM {
                         return compile_function(exp, /* name */ exp.list[1].string, env);
                     }
 
+                    // Typical while
                     if (oper == "while") {
                         auto* condition_block = create_basic_block("cond", m_ACTIVE_FUNCTION);
                         m_IR_BUILDER->CreateBr(condition_block);
@@ -497,6 +498,7 @@ class MorningLanguageLLVM {
                         return m_IR_BUILDER->getInt64(0);
                     }
 
+                    // if-then-else. Short condition without else-if blocks.
                     if (oper == "check") {
                         auto* condition = generate_expression(exp.list[1], env);
 
@@ -559,7 +561,7 @@ class MorningLanguageLLVM {
                         return m_IR_BUILDER->CreateStore(init, var_binding);
                     }
 
-                    if (oper == "scope") {
+                    if (oper == "scope" or oper == "$>") {
                         llvm::Value* block_res = nullptr;
                         auto block_env =
                             std::make_shared<Environment>(std::map<std::string, llvm::Value*> {}, env);

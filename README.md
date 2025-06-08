@@ -67,6 +67,42 @@ Simple example:
 [fprint "_VERSION: %d\n\n" _VERSION]
 ```
 
+Advanced example:
+
+```
+[func square (x) (* x x)]
+
+[func scoped_function (x) [scope
+    [+ x 100]
+    [while (> x 0)
+        [scope
+            [set x (- x 1)]
+            [fprint "%d " x]]]
+    ]
+    [fprint "\n"]
+]
+
+[fprint "square 10: %d\n" (square 10)]
+[fprint "square 0xA: %d\n" (square 0xA)]
+[fprint "square 012: %d\n" (square 012)]
+[fprint "square 0b1010: %d\n" (square 0b1010)]
+
+[fprint "scoped_function 10: %d\n" (scoped_function 10)]
+
+[var (a !int) 10]
+
+[fprint "a: %d\n" a]
+
+[check (== a 10)
+    [set a 0]]
+
+[fprint "a: %d\n" a]
+
+[func sum ((first !int) (second !int)) -> !int (+ first second)]
+
+[fprint "sum 100 1: %d\n\n" (sum 100 1)]
+```
+
 ## Documentation
 Online docs available on [this link](https://alexeev-prog.github.io/morning.lang/).
 
