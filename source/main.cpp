@@ -8,7 +8,7 @@ auto main() -> int {
 
 [fprint "square 10: %d\n" (square 10)]
 
-[func sum ((first !int) (second !int)) <-> !int (+ first second)]
+[func sum ((first !int) (second !int)) -> !int (+ first second)]
 
 [fprint "sum 100 1: %d\n\n" (sum 100 1)]
     )";

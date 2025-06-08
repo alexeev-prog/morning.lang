@@ -75,7 +75,7 @@ inline auto extract_var_name(const Exp& exp) -> std::string {
  * @return false
  **/
 inline auto has_return_type(const Exp& fn_exp) -> bool {
-    return fn_exp.list[3].type == ExpType::SYMBOL && fn_exp.list[3].string == "<->";
+    return fn_exp.list[3].type == ExpType::SYMBOL && fn_exp.list[3].string == "->";
 }
 
 /**
@@ -266,7 +266,8 @@ class MorningLanguageLLVM {
      * !str - string
      * !frac - fractional (double) number
      * !bool - basic integer
-     * Otherwise: 64bit intger
+     * !none - void, none
+     * Otherwise: 64bit integer
      *
      * @param type_string
      * @return llvm::Type*
@@ -317,6 +318,12 @@ class MorningLanguageLLVM {
         return exp.type == ExpType::LIST ? get_type(exp.list[1].string) : m_IR_BUILDER->getInt64Ty();
     }
 
+    /**
+     * @brief Extract function type
+     *
+     * @param fn_exp function exp
+     * @return llvm::FunctionType*
+     **/
     auto extract_function_type(const Exp& fn_exp) -> llvm::FunctionType* {
         auto params = fn_exp.list[2];
 
@@ -353,6 +360,14 @@ class MorningLanguageLLVM {
         return allocated_var;
     }
 
+    /**
+     * @brief Build function environment and compile function block
+     *
+     * @param fn_exp function exp
+     * @param fn_name function name
+     * @param env parent environment
+     * @return llvm::Value*
+     **/
     auto compile_function(const Exp& fn_exp, const std::string& fn_name, const env& env) -> llvm::Value* {
         auto params = fn_exp.list[2];
         auto body = has_return_type(fn_exp) ? fn_exp.list[5] : fn_exp.list[3];

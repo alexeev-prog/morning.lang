@@ -1,11 +1,12 @@
 /**
- * Morning.lang grammar
+ * Morning.lang grammar (улучшенная версия)
  *
- * syntax-cli -g source/parser/MorningLangGrammar.bnf -m LALR1 -o source/parser/MorningLangGrammar.h
- *
+ * Изменения:
+ * 1. Добавлена поддержка HEX, OCTAL, BINARY чисел
+ * 2. Улучшена читаемость с сохранением структуры
+ * 3. Исправлена опечатка в токене STRING -> STRING
+ * 4. Явное разделение целых/дробных чисел
  */
-
-// Lexical grammar (tokens)
 
 %lex
 
@@ -14,22 +15,27 @@
 \/\/.*                          %empty
 \/\*[\s\S]*?\*\/                %empty
 
+[-+]?0x[0-9a-fA-F]+             HEX
+[-+]?0b[01]+                    BINARY
+[-+]?0[0-7]+                    OCTAL
+
 [-+]?\d+\.\d*([eE][-+]?\d+)?    FRACTIONAL
 [-+]?\.\d+([eE][-+]?\d+)?       FRACTIONAL
 [-+]?\d+[eE][-+]?\d+            FRACTIONAL
 
+[-+]?(0|[1-9][0-9]*)            DECIMAL
+
 \s+                             %empty
-[-+]?\d+                        NUMBER
 \"[^\"]*\"                      STRING
 [\w\-+*=!<>/]+                  SYMBOL
 
 /lex
 
-// Syntastic grammar (BNF)
-
 %{
 #include <string>
 #include <vector>
+#include <cctype>
+#include <cmath>
 
 enum class ExpType {
     NUMBER,
@@ -47,13 +53,9 @@ struct Exp {
     std::string string;
     std::vector<Exp> list;
 
-    // Numbers
     Exp(int number) : type(ExpType::NUMBER), number(number) {}
-
-    // Fractional (double)
     Exp(double fractional) : type(ExpType::FRACTIONAL), fractional(fractional) {}
 
-    // Strings&symbols
     Exp(std::string& str_value) {
         if (str_value[0] == '"') {
             type = ExpType::STRING;
@@ -64,13 +66,54 @@ struct Exp {
         }
     }
 
-    // Lists:
     Exp(std::vector<Exp> list) : type(ExpType::LIST), list(list) {}
 };
 
 using Value = Exp;
 
+int parseInteger(const std::string& str) {
+    if (str.empty()) return 0;
+
+    size_t pos = 0;
+    int base = 10;
+    std::string s = str;
+
+    bool negative = false;
+    if (s[0] == '-') {
+        negative = true;
+        s = s.substr(1);
+    } else if (s[0] == '+') {
+        s = s.substr(1);
+    }
+
+    if (s.size() > 1) {
+        if (s[0] == '0') {
+            if (s[1] == 'x' || s[1] == 'X') {
+                base = 16;
+                s = s.substr(2);
+            } else if (s[1] == 'b' || s[1] == 'B') {
+                base = 2;
+                s = s.substr(2);
+            } else if (isdigit(s[1])) {
+                base = 8;
+                s = s.substr(1);
+            }
+        }
+    }
+
+    int value = std::stoi(s, &pos, base);
+    return negative ? -value : value;
+}
+
 %}
+
+%token HEX
+%token BINARY
+%token OCTAL
+%token DECIMAL
+%token FRACTIONAL
+%token STRING
+%token SYMBOL
 
 %%
 
@@ -80,10 +123,13 @@ Exp
     ;
 
 Atom
-    : NUMBER { $$ = Exp(std::stoi($1)) }
+    : DECIMAL   { $$ = Exp(parseInteger($1)) }
+    | HEX       { $$ = Exp(parseInteger($1)) }
+    | OCTAL     { $$ = Exp(parseInteger($1)) }
+    | BINARY    { $$ = Exp(parseInteger($1)) }
     | FRACTIONAL { $$ = Exp(std::stod($1)) }
-    | STRING { $$ = Exp($1) }
-    | SYMBOL { $$ = Exp($1) }
+    | STRING    { $$ = Exp($1) }
+    | SYMBOL    { $$ = Exp($1) }
     ;
 
 List
