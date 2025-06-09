@@ -4,37 +4,26 @@
 
 auto main() -> int {
     const std::string PROGRAM = R"(
-[func square (x) (* x x)]
+[object Figure empty]
+    [scope
+        (var x 0)
+        (var y 0)
+        (var width 0)
+        (var height 0)
 
-[func scoped_function (x) [scope
-    [+ x 100]
-    [while (> x 0)
-        [$>
-            [set x (- x 1)]
-            [fprint "%d " x]]]
+        (method create(this x y width height)
+            [scope
+                (set (property this x) x)
+                (set (property this y) y)
+                (set (property this width) width)
+                (set (property this height) height)
+            ])
+
+        (method areasize(this)
+            (* (property this x) (property this y))
+        )
     ]
-    [fprint "\n"]
 ]
-
-[fprint "square 10: %d\n" (square 10)]
-[fprint "square 0xA: %d\n" (square 0xA)]
-[fprint "square 012: %d\n" (square 012)]
-[fprint "square 0b1010: %d\n" (square 0b1010)]
-
-[fprint "scoped_function 10: %d\n" (scoped_function 10)]
-
-[var (a !int) 10]
-
-[fprint "a: %d\n" a]
-
-[check (== a 10)
-    [set a 0]]
-
-[fprint "a: %d\n" a]
-
-[func sum ((first !int) (second !int)) -> !int (+ first second)]
-
-[fprint "sum 100 1: %d\n\n" (sum 100 1)]
     )";
 
     MorningLanguageLLVM morning_vm;
