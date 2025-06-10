@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 commit ebbbf7bb969a3503e010eb3fe321bb7f243bece4
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Tue Jun 10 17:58:48 2025 +0700
@@ -9,6 +10,13 @@ Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Tue Jun 10 02:29:20 2025 +0700
 
     add basic object syntax
+=======
+commit d14952df199310f2ba04bd71827e10f94b92e806
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Wed Jun 11 03:30:39 2025 +0700
+
+    relaunch coding
+>>>>>>> OOP
 
 commit 3d0a78cd1089ad2d5b1f03e00f6c2ec2baf9833c
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
