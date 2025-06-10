@@ -20,6 +20,7 @@ let
     catch2
     nodejs
     catch2_3
+    boehmgc
     valgrind
     libxml2
   ];

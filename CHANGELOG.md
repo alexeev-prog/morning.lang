@@ -1,3 +1,84 @@
+commit 559305fe2453fb4a88bb3ef51d8fa6b41536ed62
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Wed Jun 11 04:19:29 2025 +0700
+
+    revert changes; try to fix bgs
+
+commit cce1cb4c9fff33c87c1a43084a9ff67d773d9e21
+Merge: b1a01ce 8db6786
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Wed Jun 11 04:18:15 2025 +0700
+
+    small changes
+
+commit 8db67866ca9a28a51fd4a283fd4dbc2172a3bb9f
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Wed Jun 11 04:16:47 2025 +0700
+
+    small changes
+
+commit b1a01ce1d9a93a40ada6764050d245ed06129e79
+Merge: 48ceeca 1761243
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Wed Jun 11 04:15:12 2025 +0700
+
+    Merge branch 'OOP' into dev
+
+commit 17612435f9f07afb0756051c49daeca2696b9dd3
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Wed Jun 11 04:10:35 2025 +0700
+
+    small changes
+
+commit 48ceeca8443b35484f38cee346b72f35ab67ae0c
+Merge: fb84b60 0952aa1
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Wed Jun 11 04:07:29 2025 +0700
+
+    Merge branch 'OOP' into dev
+
+commit 0952aa1e25305e5e7c499974ecf30cc468743afe
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Wed Jun 11 04:06:24 2025 +0700
+
+    add class info struct, add basic OOP syntax
+
+commit d14952df199310f2ba04bd71827e10f94b92e806
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Wed Jun 11 03:30:39 2025 +0700
+
+    relaunch coding
+
+commit fb84b602ab46474f41ab76ef96a5475b1e8319db
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Tue Jun 10 20:14:08 2025 +0700
+
+    add boehmgc and allocating instances
+
+commit ebbbf7bb969a3503e010eb3fe321bb7f243bece4
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Tue Jun 10 17:58:48 2025 +0700
+
+    fix build script, fix errors, add class fields&methods
+
+commit 47f88c117bd3538c491b1bd6e13ce22d5a90ab50
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Tue Jun 10 02:29:20 2025 +0700
+
+    add basic object syntax
+
+commit 3d0a78cd1089ad2d5b1f03e00f6c2ec2baf9833c
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Mon Jun 9 02:21:51 2025 +0700
+
+    fixes
+
+commit 3107832d4306701fa819dd1fb33f0c0aa695f369
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Mon Jun 9 00:05:17 2025 +0700
+
+    improve build system, readme, improve syntax
+
 commit c1a7f270646e5c1a39d96d30241ce14cffbc2dc3
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Sun Jun 8 14:47:26 2025 +0700

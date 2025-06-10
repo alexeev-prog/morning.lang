@@ -38,3 +38,8 @@ build/
 package-lock.json
 npm-packages/
 out.bin
+<<<<<<< HEAD
+.codechecker/
+=======
+.codechecker
+>>>>>>> OOP

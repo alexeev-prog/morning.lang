@@ -158,7 +158,7 @@ build_project() {
 run_tests() {
     print_header "Running test suite"
     
-    local test_dir="$BUILD_DIR/test"
+    local test_dir="$BUILD_DIR/bin/test"
     if [ ! -d "$test_dir" ]; then
         print_error "Test directory not found: $test_dir"
         exit 1

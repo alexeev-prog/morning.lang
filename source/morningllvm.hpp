@@ -78,6 +78,21 @@ inline auto has_return_type(const Exp& fn_exp) -> bool {
     return fn_exp.list[3].type == ExpType::SYMBOL && fn_exp.list[3].string == "->";
 }
 
+inline auto is_tagged_list(const Exp& exp, const std::string& tag) -> bool {
+    return exp.type == ExpType::LIST && exp.list[0].type == ExpType::SYMBOL && exp.list[0].string == tag;
+}
+
+inline auto is_variable(const Exp& exp) -> bool { return is_tagged_list(exp, "var"); }
+inline auto is_function(const Exp& exp) -> bool { return is_tagged_list(exp, "function"); }
+inline auto is_newobj(const Exp& exp) -> bool { return is_tagged_list(exp, "newobj"); }
+
+struct ClassInfo {
+    llvm::StructType* cls;
+    llvm::StructType* parent;
+    std::map<std::string, llvm::Type*> fields_map;
+    std::map<std::string, llvm::Function*> methods_map;
+};
+
 /**
  * @class MorningLanguageLLVM
  * @brief Converts MorningLang code to LLVM IR (Intermediate Representation)
@@ -184,6 +199,10 @@ class MorningLanguageLLVM {
      * Tool for writing LLVM Vars instructions
      **/
     std::unique_ptr<llvm::IRBuilder<>> m_VARS_BUILDER;
+
+    llvm::StructType* m_CURRENT_CLASS = nullptr;
+
+    std::map<std::string, ClassInfo> m_CLASS_MAP;
 
     /**
      * @brief Set the up global environment
@@ -305,7 +324,8 @@ class MorningLanguageLLVM {
             return m_IR_BUILDER->getVoidTy();
         }
 
-        return m_IR_BUILDER->getInt64Ty();
+        return m_CLASS_MAP[type_string].cls->getPointerTo();
+        // return m_IR_BUILDER->getInt64Ty();
     }
 
     /**
@@ -333,8 +353,11 @@ class MorningLanguageLLVM {
         std::vector<llvm::Type*> param_types {};
 
         for (auto& param : params.list) {
+            auto param_name = extract_var_name(param);
             auto* param_type = extract_var_type(param);
-            param_types.push_back(param_type);
+            param_types.push_back(
+                param_name == "this" ? (llvm::Type*)m_CURRENT_CLASS->getPointerTo() : param_type
+            );
         }
 
         return llvm::FunctionType::get(return_type, param_types, /* varargs */ false);
@@ -368,12 +391,18 @@ class MorningLanguageLLVM {
      * @param env parent environment
      * @return llvm::Value*
      **/
-    auto compile_function(const Exp& fn_exp, const std::string& fn_name, const env& env) -> llvm::Value* {
+    auto compile_function(const Exp& fn_exp, std::string fn_name, const env& env) -> llvm::Value* {
         auto params = fn_exp.list[2];
         auto body = has_return_type(fn_exp) ? fn_exp.list[5] : fn_exp.list[3];
 
         auto* prev_fn = m_ACTIVE_FUNCTION;
         auto* prev_block = m_IR_BUILDER->GetInsertBlock();
+
+        // auto orig_name = fn_name;
+
+        if (m_CURRENT_CLASS != nullptr) {
+            fn_name = std::string(m_CURRENT_CLASS->getName().data()) + "_" + fn_name;
+        }
 
         auto* new_fn = create_function(fn_name, extract_function_type(fn_exp), env);
         m_ACTIVE_FUNCTION = new_fn;
@@ -398,6 +427,58 @@ class MorningLanguageLLVM {
         m_ACTIVE_FUNCTION = prev_fn;
 
         return new_fn;
+    }
+
+    void inherit_class(llvm::StructType* cls, llvm::StructType* parent) {
+        // TODO: MAKE inheritance
+    }
+
+    auto get_class_by_name(const std::string& name) -> llvm::StructType* {
+        return llvm::StructType::getTypeByName(*m_CONTEXT, name);
+    }
+
+    void build_class_info(llvm::StructType* cls, const Exp& cls_exp, env env) {
+        auto class_name = cls_exp.list[1].string;
+        auto* class_info = &m_CLASS_MAP[class_name];
+
+        auto body = cls_exp.list[1];
+
+        for (auto i = 1; i < body.list.size(); i++) {
+            auto exp = body.list[i];
+
+            if (is_variable(exp)) {
+                auto var_name_decl = exp.list[1];
+
+                auto field_name = extract_var_name(var_name_decl);
+                auto field_type = extract_var_type(var_name_decl);
+
+                class_info->fields_map[field_name] = field_type;
+            } else if (is_function(exp)) {
+                auto method_name = exp.list[1].string;
+
+                auto fn_name = class_name + "_" + method_name;
+
+                class_info->methods_map[method_name] = create_function_prototype(fn_name, extract_function_type(exp), env);
+            }
+        }
+
+        build_class_body(cls);
+    }
+
+    void build_class_body(llvm::StructType* cls) {
+        std::string class_name(cls->getName().data());
+
+        auto* class_info = &m_CLASS_MAP[class_name];
+
+        auto cls_fields = std::vector<llvm::Type*>{};
+
+        for (const auto& field_info : class_info->fields_map) {
+            cls_fields.push_back(field_info.second);
+        }
+
+        cls->setBody(cls_fields, false);
+
+        // TODO: vTable
     }
 
     /**
@@ -468,6 +549,34 @@ class MorningLanguageLLVM {
                         GEN_BINARY_OP(CreateICmpUGE, "__tmpcmp__");
                     } else if (oper == "<=" || oper == "__CMPLE__") {
                         GEN_BINARY_OP(CreateICmpULE, "__tmpcmp__");
+                    }
+
+                    if (oper == "class") {
+                        auto name = exp.list[1].string;
+                        auto* parent = exp.list[2].string == "self"
+                                                        ? nullptr
+                                                        : get_class_by_name(exp.list[2].string);
+
+                        m_CURRENT_CLASS = llvm::StructType::create(*m_CONTEXT, name);
+
+                        if (parent != nullptr) {
+                            inherit_class(m_CURRENT_CLASS, parent);
+                        } else {
+                            m_CLASS_MAP[name] = {
+                                m_CURRENT_CLASS,
+                                parent,
+                                {},
+                                {}
+                            };
+                        }
+
+                        build_class_info(m_CURRENT_CLASS, exp, env);
+
+                        generate_expression(exp.list[3], env);
+
+                        m_CURRENT_CLASS = nullptr;
+
+                        return m_IR_BUILDER->getInt64(0);
                     }
 
                     if (oper == "func") {
@@ -549,6 +658,10 @@ class MorningLanguageLLVM {
                     }
 
                     if (oper == "var") {
+                        if (m_CURRENT_CLASS != nullptr) {
+                            return m_IR_BUILDER->getInt64(0);
+                        }
+
                         auto var_name_declaration = exp.list[1];
                         auto var_name = extract_var_name(var_name_declaration);
 
@@ -561,7 +674,7 @@ class MorningLanguageLLVM {
                         return m_IR_BUILDER->CreateStore(init, var_binding);
                     }
 
-                    if (oper == "scope" or oper == "$>") {
+                    if (oper == "scope") {
                         llvm::Value* block_res = nullptr;
                         auto block_env =
                             std::make_shared<Environment>(std::map<std::string, llvm::Value*> {}, env);

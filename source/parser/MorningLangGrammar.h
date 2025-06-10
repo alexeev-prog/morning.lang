@@ -54,6 +54,7 @@
 #include <vector>
 #include <cctype>
 #include <cmath>
+#include <cstdlib>
 
 enum class ExpType {
     NUMBER,
@@ -61,6 +62,7 @@ enum class ExpType {
     STRING,
     SYMBOL,
     LIST,
+    NIL
 };
 
 struct Exp {
@@ -71,13 +73,14 @@ struct Exp {
     std::string string;
     std::vector<Exp> list;
 
+    Exp() : type(ExpType::NIL) {}
     Exp(int number) : type(ExpType::NUMBER), number(number) {}
     Exp(double fractional) : type(ExpType::FRACTIONAL), fractional(fractional) {}
 
     Exp(std::string& str_value) {
         if (str_value[0] == '"') {
             type = ExpType::STRING;
-            string = str_value.substr(1, str_value.size() - 2);
+            string = unescape(str_value.substr(1, str_value.size() - 2));
         } else {
             type = ExpType::SYMBOL;
             string = str_value;
@@ -85,6 +88,26 @@ struct Exp {
     }
 
     Exp(std::vector<Exp> list) : type(ExpType::LIST), list(list) {}
+
+private:
+    std::string unescape(const std::string& s) {
+        std::string result;
+        for (size_t i = 0; i < s.length(); ++i) {
+            if (s[i] == '\\') {
+                switch (s[++i]) {
+                    case 'n': result += '\n'; break;
+                    case 't': result += '\t'; break;
+                    case 'r': result += '\r'; break;
+                    case '"': result += '"'; break;
+                    case '\\': result += '\\'; break;
+                    default: result += '\\' + s[i];
+                }
+            } else {
+                result += s[i];
+            }
+        }
+        return result;
+    }
 };
 
 using Value = Exp;
@@ -153,11 +176,12 @@ enum class TokenType {
   FRACTIONAL = 8,
   STRING = 9,
   SYMBOL = 10,
-  TOKEN_TYPE_11 = 11,
+  NIL = 11,
   TOKEN_TYPE_12 = 12,
   TOKEN_TYPE_13 = 13,
   TOKEN_TYPE_14 = 14,
-  __EOF = 15
+  TOKEN_TYPE_15 = 15,
+  __EOF = 16
   // clang-format on
 };
 
@@ -390,7 +414,7 @@ class Tokenizer {
    * Lexical rules.
    */
   // clang-format off
-  static constexpr size_t LEX_RULES_COUNT = 16;
+  static constexpr size_t LEX_RULES_COUNT = 17;
   static std::array<LexRule, LEX_RULES_COUNT> lexRules_;
   static std::map<TokenizerState, std::vector<size_t>> lexRulesByStartConditions_;
   // clang-format on
@@ -440,19 +464,19 @@ std::string Tokenizer::__EOF("$");
 
 // clang-format off
 inline TokenType _lexRule1(const Tokenizer& tokenizer, const std::string& yytext) {
-return TokenType::TOKEN_TYPE_11;
-}
-
-inline TokenType _lexRule2(const Tokenizer& tokenizer, const std::string& yytext) {
 return TokenType::TOKEN_TYPE_12;
 }
 
-inline TokenType _lexRule3(const Tokenizer& tokenizer, const std::string& yytext) {
+inline TokenType _lexRule2(const Tokenizer& tokenizer, const std::string& yytext) {
 return TokenType::TOKEN_TYPE_13;
 }
 
-inline TokenType _lexRule4(const Tokenizer& tokenizer, const std::string& yytext) {
+inline TokenType _lexRule3(const Tokenizer& tokenizer, const std::string& yytext) {
 return TokenType::TOKEN_TYPE_14;
+}
+
+inline TokenType _lexRule4(const Tokenizer& tokenizer, const std::string& yytext) {
+return TokenType::TOKEN_TYPE_15;
 }
 
 inline TokenType _lexRule5(const Tokenizer& tokenizer, const std::string& yytext) {
@@ -464,19 +488,19 @@ return TokenType::__EMPTY;
 }
 
 inline TokenType _lexRule7(const Tokenizer& tokenizer, const std::string& yytext) {
-return TokenType::HEX;
+return TokenType::NIL;
 }
 
 inline TokenType _lexRule8(const Tokenizer& tokenizer, const std::string& yytext) {
-return TokenType::BINARY;
+return TokenType::HEX;
 }
 
 inline TokenType _lexRule9(const Tokenizer& tokenizer, const std::string& yytext) {
-return TokenType::OCTAL;
+return TokenType::BINARY;
 }
 
 inline TokenType _lexRule10(const Tokenizer& tokenizer, const std::string& yytext) {
-return TokenType::FRACTIONAL;
+return TokenType::OCTAL;
 }
 
 inline TokenType _lexRule11(const Tokenizer& tokenizer, const std::string& yytext) {
@@ -488,18 +512,22 @@ return TokenType::FRACTIONAL;
 }
 
 inline TokenType _lexRule13(const Tokenizer& tokenizer, const std::string& yytext) {
-return TokenType::DECIMAL;
+return TokenType::FRACTIONAL;
 }
 
 inline TokenType _lexRule14(const Tokenizer& tokenizer, const std::string& yytext) {
-return TokenType::__EMPTY;
+return TokenType::DECIMAL;
 }
 
 inline TokenType _lexRule15(const Tokenizer& tokenizer, const std::string& yytext) {
-return TokenType::STRING;
+return TokenType::__EMPTY;
 }
 
 inline TokenType _lexRule16(const Tokenizer& tokenizer, const std::string& yytext) {
+return TokenType::STRING;
+}
+
+inline TokenType _lexRule17(const Tokenizer& tokenizer, const std::string& yytext) {
 return TokenType::SYMBOL;
 }
 // clang-format on
@@ -515,18 +543,19 @@ std::array<LexRule, Tokenizer::LEX_RULES_COUNT> Tokenizer::lexRules_ = {{
   {std::regex(R"(^\))"), &_lexRule4},
   {std::regex(R"(^\/\/.*)"), &_lexRule5},
   {std::regex(R"(^\/\*[\s\S]*?\*\/)"), &_lexRule6},
-  {std::regex(R"(^[-+]?0x[0-9a-fA-F]+)"), &_lexRule7},
-  {std::regex(R"(^[-+]?0b[01]+)"), &_lexRule8},
-  {std::regex(R"(^[-+]?0[0-7]+)"), &_lexRule9},
-  {std::regex(R"(^[-+]?\d+\.\d*([eE][-+]?\d+)?)"), &_lexRule10},
-  {std::regex(R"(^[-+]?\.\d+([eE][-+]?\d+)?)"), &_lexRule11},
-  {std::regex(R"(^[-+]?\d+[eE][-+]?\d+)"), &_lexRule12},
-  {std::regex(R"(^[-+]?(0|[1-9][0-9]*))"), &_lexRule13},
-  {std::regex(R"(^\s+)"), &_lexRule14},
-  {std::regex(R"(^"[^\"]*")"), &_lexRule15},
-  {std::regex(R"(^[\w\-+*=!<>/]+)"), &_lexRule16}
+  {std::regex(R"(^nil)"), &_lexRule7},
+  {std::regex(R"(^[-+]?0x[0-9a-fA-F]+)"), &_lexRule8},
+  {std::regex(R"(^[-+]?0b[01]+)"), &_lexRule9},
+  {std::regex(R"(^[-+]?0[0-7]+)"), &_lexRule10},
+  {std::regex(R"(^[-+]?\d+\.\d*([eE][-+]?\d+)?)"), &_lexRule11},
+  {std::regex(R"(^[-+]?\.\d+([eE][-+]?\d+)?)"), &_lexRule12},
+  {std::regex(R"(^[-+]?\d+[eE][-+]?\d+)"), &_lexRule13},
+  {std::regex(R"(^[-+]?\d+)"), &_lexRule14},
+  {std::regex(R"(^\s+)"), &_lexRule15},
+  {std::regex(R"(^"(\\.|[^"\\])*")"), &_lexRule16},
+  {std::regex(R"(^[\w\-+*=!<>/#]+)"), &_lexRule17}
 }};
-std::map<TokenizerState, std::vector<size_t>> Tokenizer::lexRulesByStartConditions_ =  {{TokenizerState::INITIAL, {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}}};
+std::map<TokenizerState, std::vector<size_t>> Tokenizer::lexRulesByStartConditions_ =  {{TokenizerState::INITIAL, {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}}};
 // clang-format on
 
 #endif
@@ -728,10 +757,10 @@ class MorningLangGrammar {
   }
 
   // clang-format off
-  static constexpr size_t PRODUCTIONS_COUNT = 14;
+  static constexpr size_t PRODUCTIONS_COUNT = 15;
   static std::array<Production, PRODUCTIONS_COUNT> productions_;
 
-  static constexpr size_t ROWS_COUNT = 18;
+  static constexpr size_t ROWS_COUNT = 19;
   static std::array<Row, ROWS_COUNT> table_;
   // clang-format on
 };
@@ -853,10 +882,8 @@ PUSH_VR();
 void _handler11(yyparse& parser) {
 // Semantic action prologue.
 parser.tokensStack.pop_back();
-auto _2 = POP_V();
-parser.tokensStack.pop_back();
 
-auto __ = _2 ;
+auto __ = Exp() ;
 
  // Semantic action epilogue.
 PUSH_VR();
@@ -878,6 +905,19 @@ PUSH_VR();
 
 void _handler13(yyparse& parser) {
 // Semantic action prologue.
+parser.tokensStack.pop_back();
+auto _2 = POP_V();
+parser.tokensStack.pop_back();
+
+auto __ = _2 ;
+
+ // Semantic action epilogue.
+PUSH_VR();
+
+}
+
+void _handler14(yyparse& parser) {
+// Semantic action prologue.
 
 
 auto __ = Exp(std::vector<Exp>{}) ;
@@ -887,7 +927,7 @@ PUSH_VR();
 
 }
 
-void _handler14(yyparse& parser) {
+void _handler15(yyparse& parser) {
 // Semantic action prologue.
 auto _2 = POP_V();
 auto _1 = POP_V();
@@ -911,10 +951,11 @@ std::array<Production, yyparse::PRODUCTIONS_COUNT> yyparse::productions_ = {{{-1
 {1, 1, &_handler8},
 {1, 1, &_handler9},
 {1, 1, &_handler10},
-{2, 3, &_handler11},
+{1, 1, &_handler11},
 {2, 3, &_handler12},
-{3, 0, &_handler13},
-{3, 2, &_handler14}}};
+{2, 3, &_handler13},
+{3, 0, &_handler14},
+{3, 2, &_handler15}}};
 // clang-format on
 
 // ------------------------------------------------------------------
@@ -922,24 +963,25 @@ std::array<Production, yyparse::PRODUCTIONS_COUNT> yyparse::productions_ = {{{-1
 
 // clang-format off
 std::array<Row, yyparse::ROWS_COUNT> yyparse::table_ = {
-    Row {{0, {TE::Transit, 1}}, {1, {TE::Transit, 2}}, {2, {TE::Transit, 3}}, {4, {TE::Shift, 4}}, {5, {TE::Shift, 5}}, {6, {TE::Shift, 6}}, {7, {TE::Shift, 7}}, {8, {TE::Shift, 8}}, {9, {TE::Shift, 9}}, {10, {TE::Shift, 10}}, {11, {TE::Shift, 11}}, {13, {TE::Shift, 12}}},
-    Row {{15, {TE::Accept, 0}}},
-    Row {{4, {TE::Reduce, 1}}, {5, {TE::Reduce, 1}}, {6, {TE::Reduce, 1}}, {7, {TE::Reduce, 1}}, {8, {TE::Reduce, 1}}, {9, {TE::Reduce, 1}}, {10, {TE::Reduce, 1}}, {11, {TE::Reduce, 1}}, {12, {TE::Reduce, 1}}, {13, {TE::Reduce, 1}}, {14, {TE::Reduce, 1}}, {15, {TE::Reduce, 1}}},
-    Row {{4, {TE::Reduce, 2}}, {5, {TE::Reduce, 2}}, {6, {TE::Reduce, 2}}, {7, {TE::Reduce, 2}}, {8, {TE::Reduce, 2}}, {9, {TE::Reduce, 2}}, {10, {TE::Reduce, 2}}, {11, {TE::Reduce, 2}}, {12, {TE::Reduce, 2}}, {13, {TE::Reduce, 2}}, {14, {TE::Reduce, 2}}, {15, {TE::Reduce, 2}}},
-    Row {{4, {TE::Reduce, 3}}, {5, {TE::Reduce, 3}}, {6, {TE::Reduce, 3}}, {7, {TE::Reduce, 3}}, {8, {TE::Reduce, 3}}, {9, {TE::Reduce, 3}}, {10, {TE::Reduce, 3}}, {11, {TE::Reduce, 3}}, {12, {TE::Reduce, 3}}, {13, {TE::Reduce, 3}}, {14, {TE::Reduce, 3}}, {15, {TE::Reduce, 3}}},
-    Row {{4, {TE::Reduce, 4}}, {5, {TE::Reduce, 4}}, {6, {TE::Reduce, 4}}, {7, {TE::Reduce, 4}}, {8, {TE::Reduce, 4}}, {9, {TE::Reduce, 4}}, {10, {TE::Reduce, 4}}, {11, {TE::Reduce, 4}}, {12, {TE::Reduce, 4}}, {13, {TE::Reduce, 4}}, {14, {TE::Reduce, 4}}, {15, {TE::Reduce, 4}}},
-    Row {{4, {TE::Reduce, 5}}, {5, {TE::Reduce, 5}}, {6, {TE::Reduce, 5}}, {7, {TE::Reduce, 5}}, {8, {TE::Reduce, 5}}, {9, {TE::Reduce, 5}}, {10, {TE::Reduce, 5}}, {11, {TE::Reduce, 5}}, {12, {TE::Reduce, 5}}, {13, {TE::Reduce, 5}}, {14, {TE::Reduce, 5}}, {15, {TE::Reduce, 5}}},
-    Row {{4, {TE::Reduce, 6}}, {5, {TE::Reduce, 6}}, {6, {TE::Reduce, 6}}, {7, {TE::Reduce, 6}}, {8, {TE::Reduce, 6}}, {9, {TE::Reduce, 6}}, {10, {TE::Reduce, 6}}, {11, {TE::Reduce, 6}}, {12, {TE::Reduce, 6}}, {13, {TE::Reduce, 6}}, {14, {TE::Reduce, 6}}, {15, {TE::Reduce, 6}}},
-    Row {{4, {TE::Reduce, 7}}, {5, {TE::Reduce, 7}}, {6, {TE::Reduce, 7}}, {7, {TE::Reduce, 7}}, {8, {TE::Reduce, 7}}, {9, {TE::Reduce, 7}}, {10, {TE::Reduce, 7}}, {11, {TE::Reduce, 7}}, {12, {TE::Reduce, 7}}, {13, {TE::Reduce, 7}}, {14, {TE::Reduce, 7}}, {15, {TE::Reduce, 7}}},
-    Row {{4, {TE::Reduce, 8}}, {5, {TE::Reduce, 8}}, {6, {TE::Reduce, 8}}, {7, {TE::Reduce, 8}}, {8, {TE::Reduce, 8}}, {9, {TE::Reduce, 8}}, {10, {TE::Reduce, 8}}, {11, {TE::Reduce, 8}}, {12, {TE::Reduce, 8}}, {13, {TE::Reduce, 8}}, {14, {TE::Reduce, 8}}, {15, {TE::Reduce, 8}}},
-    Row {{4, {TE::Reduce, 9}}, {5, {TE::Reduce, 9}}, {6, {TE::Reduce, 9}}, {7, {TE::Reduce, 9}}, {8, {TE::Reduce, 9}}, {9, {TE::Reduce, 9}}, {10, {TE::Reduce, 9}}, {11, {TE::Reduce, 9}}, {12, {TE::Reduce, 9}}, {13, {TE::Reduce, 9}}, {14, {TE::Reduce, 9}}, {15, {TE::Reduce, 9}}},
-    Row {{3, {TE::Transit, 13}}, {4, {TE::Reduce, 12}}, {5, {TE::Reduce, 12}}, {6, {TE::Reduce, 12}}, {7, {TE::Reduce, 12}}, {8, {TE::Reduce, 12}}, {9, {TE::Reduce, 12}}, {10, {TE::Reduce, 12}}, {11, {TE::Reduce, 12}}, {12, {TE::Reduce, 12}}, {13, {TE::Reduce, 12}}},
-    Row {{3, {TE::Transit, 16}}, {4, {TE::Reduce, 12}}, {5, {TE::Reduce, 12}}, {6, {TE::Reduce, 12}}, {7, {TE::Reduce, 12}}, {8, {TE::Reduce, 12}}, {9, {TE::Reduce, 12}}, {10, {TE::Reduce, 12}}, {11, {TE::Reduce, 12}}, {13, {TE::Reduce, 12}}, {14, {TE::Reduce, 12}}},
-    Row {{0, {TE::Transit, 15}}, {1, {TE::Transit, 2}}, {2, {TE::Transit, 3}}, {4, {TE::Shift, 4}}, {5, {TE::Shift, 5}}, {6, {TE::Shift, 6}}, {7, {TE::Shift, 7}}, {8, {TE::Shift, 8}}, {9, {TE::Shift, 9}}, {10, {TE::Shift, 10}}, {11, {TE::Shift, 11}}, {12, {TE::Shift, 14}}, {13, {TE::Shift, 12}}},
-    Row {{4, {TE::Reduce, 10}}, {5, {TE::Reduce, 10}}, {6, {TE::Reduce, 10}}, {7, {TE::Reduce, 10}}, {8, {TE::Reduce, 10}}, {9, {TE::Reduce, 10}}, {10, {TE::Reduce, 10}}, {11, {TE::Reduce, 10}}, {12, {TE::Reduce, 10}}, {13, {TE::Reduce, 10}}, {14, {TE::Reduce, 10}}, {15, {TE::Reduce, 10}}},
-    Row {{4, {TE::Reduce, 13}}, {5, {TE::Reduce, 13}}, {6, {TE::Reduce, 13}}, {7, {TE::Reduce, 13}}, {8, {TE::Reduce, 13}}, {9, {TE::Reduce, 13}}, {10, {TE::Reduce, 13}}, {11, {TE::Reduce, 13}}, {12, {TE::Reduce, 13}}, {13, {TE::Reduce, 13}}, {14, {TE::Reduce, 13}}},
-    Row {{0, {TE::Transit, 15}}, {1, {TE::Transit, 2}}, {2, {TE::Transit, 3}}, {4, {TE::Shift, 4}}, {5, {TE::Shift, 5}}, {6, {TE::Shift, 6}}, {7, {TE::Shift, 7}}, {8, {TE::Shift, 8}}, {9, {TE::Shift, 9}}, {10, {TE::Shift, 10}}, {11, {TE::Shift, 11}}, {13, {TE::Shift, 12}}, {14, {TE::Shift, 17}}},
-    Row {{4, {TE::Reduce, 11}}, {5, {TE::Reduce, 11}}, {6, {TE::Reduce, 11}}, {7, {TE::Reduce, 11}}, {8, {TE::Reduce, 11}}, {9, {TE::Reduce, 11}}, {10, {TE::Reduce, 11}}, {11, {TE::Reduce, 11}}, {12, {TE::Reduce, 11}}, {13, {TE::Reduce, 11}}, {14, {TE::Reduce, 11}}, {15, {TE::Reduce, 11}}}
+    Row {{0, {TE::Transit, 1}}, {1, {TE::Transit, 2}}, {2, {TE::Transit, 3}}, {4, {TE::Shift, 4}}, {5, {TE::Shift, 5}}, {6, {TE::Shift, 6}}, {7, {TE::Shift, 7}}, {8, {TE::Shift, 8}}, {9, {TE::Shift, 9}}, {10, {TE::Shift, 10}}, {11, {TE::Shift, 11}}, {12, {TE::Shift, 12}}, {14, {TE::Shift, 13}}},
+    Row {{16, {TE::Accept, 0}}},
+    Row {{4, {TE::Reduce, 1}}, {5, {TE::Reduce, 1}}, {6, {TE::Reduce, 1}}, {7, {TE::Reduce, 1}}, {8, {TE::Reduce, 1}}, {9, {TE::Reduce, 1}}, {10, {TE::Reduce, 1}}, {11, {TE::Reduce, 1}}, {12, {TE::Reduce, 1}}, {13, {TE::Reduce, 1}}, {14, {TE::Reduce, 1}}, {15, {TE::Reduce, 1}}, {16, {TE::Reduce, 1}}},
+    Row {{4, {TE::Reduce, 2}}, {5, {TE::Reduce, 2}}, {6, {TE::Reduce, 2}}, {7, {TE::Reduce, 2}}, {8, {TE::Reduce, 2}}, {9, {TE::Reduce, 2}}, {10, {TE::Reduce, 2}}, {11, {TE::Reduce, 2}}, {12, {TE::Reduce, 2}}, {13, {TE::Reduce, 2}}, {14, {TE::Reduce, 2}}, {15, {TE::Reduce, 2}}, {16, {TE::Reduce, 2}}},
+    Row {{4, {TE::Reduce, 3}}, {5, {TE::Reduce, 3}}, {6, {TE::Reduce, 3}}, {7, {TE::Reduce, 3}}, {8, {TE::Reduce, 3}}, {9, {TE::Reduce, 3}}, {10, {TE::Reduce, 3}}, {11, {TE::Reduce, 3}}, {12, {TE::Reduce, 3}}, {13, {TE::Reduce, 3}}, {14, {TE::Reduce, 3}}, {15, {TE::Reduce, 3}}, {16, {TE::Reduce, 3}}},
+    Row {{4, {TE::Reduce, 4}}, {5, {TE::Reduce, 4}}, {6, {TE::Reduce, 4}}, {7, {TE::Reduce, 4}}, {8, {TE::Reduce, 4}}, {9, {TE::Reduce, 4}}, {10, {TE::Reduce, 4}}, {11, {TE::Reduce, 4}}, {12, {TE::Reduce, 4}}, {13, {TE::Reduce, 4}}, {14, {TE::Reduce, 4}}, {15, {TE::Reduce, 4}}, {16, {TE::Reduce, 4}}},
+    Row {{4, {TE::Reduce, 5}}, {5, {TE::Reduce, 5}}, {6, {TE::Reduce, 5}}, {7, {TE::Reduce, 5}}, {8, {TE::Reduce, 5}}, {9, {TE::Reduce, 5}}, {10, {TE::Reduce, 5}}, {11, {TE::Reduce, 5}}, {12, {TE::Reduce, 5}}, {13, {TE::Reduce, 5}}, {14, {TE::Reduce, 5}}, {15, {TE::Reduce, 5}}, {16, {TE::Reduce, 5}}},
+    Row {{4, {TE::Reduce, 6}}, {5, {TE::Reduce, 6}}, {6, {TE::Reduce, 6}}, {7, {TE::Reduce, 6}}, {8, {TE::Reduce, 6}}, {9, {TE::Reduce, 6}}, {10, {TE::Reduce, 6}}, {11, {TE::Reduce, 6}}, {12, {TE::Reduce, 6}}, {13, {TE::Reduce, 6}}, {14, {TE::Reduce, 6}}, {15, {TE::Reduce, 6}}, {16, {TE::Reduce, 6}}},
+    Row {{4, {TE::Reduce, 7}}, {5, {TE::Reduce, 7}}, {6, {TE::Reduce, 7}}, {7, {TE::Reduce, 7}}, {8, {TE::Reduce, 7}}, {9, {TE::Reduce, 7}}, {10, {TE::Reduce, 7}}, {11, {TE::Reduce, 7}}, {12, {TE::Reduce, 7}}, {13, {TE::Reduce, 7}}, {14, {TE::Reduce, 7}}, {15, {TE::Reduce, 7}}, {16, {TE::Reduce, 7}}},
+    Row {{4, {TE::Reduce, 8}}, {5, {TE::Reduce, 8}}, {6, {TE::Reduce, 8}}, {7, {TE::Reduce, 8}}, {8, {TE::Reduce, 8}}, {9, {TE::Reduce, 8}}, {10, {TE::Reduce, 8}}, {11, {TE::Reduce, 8}}, {12, {TE::Reduce, 8}}, {13, {TE::Reduce, 8}}, {14, {TE::Reduce, 8}}, {15, {TE::Reduce, 8}}, {16, {TE::Reduce, 8}}},
+    Row {{4, {TE::Reduce, 9}}, {5, {TE::Reduce, 9}}, {6, {TE::Reduce, 9}}, {7, {TE::Reduce, 9}}, {8, {TE::Reduce, 9}}, {9, {TE::Reduce, 9}}, {10, {TE::Reduce, 9}}, {11, {TE::Reduce, 9}}, {12, {TE::Reduce, 9}}, {13, {TE::Reduce, 9}}, {14, {TE::Reduce, 9}}, {15, {TE::Reduce, 9}}, {16, {TE::Reduce, 9}}},
+    Row {{4, {TE::Reduce, 10}}, {5, {TE::Reduce, 10}}, {6, {TE::Reduce, 10}}, {7, {TE::Reduce, 10}}, {8, {TE::Reduce, 10}}, {9, {TE::Reduce, 10}}, {10, {TE::Reduce, 10}}, {11, {TE::Reduce, 10}}, {12, {TE::Reduce, 10}}, {13, {TE::Reduce, 10}}, {14, {TE::Reduce, 10}}, {15, {TE::Reduce, 10}}, {16, {TE::Reduce, 10}}},
+    Row {{3, {TE::Transit, 14}}, {4, {TE::Reduce, 13}}, {5, {TE::Reduce, 13}}, {6, {TE::Reduce, 13}}, {7, {TE::Reduce, 13}}, {8, {TE::Reduce, 13}}, {9, {TE::Reduce, 13}}, {10, {TE::Reduce, 13}}, {11, {TE::Reduce, 13}}, {12, {TE::Reduce, 13}}, {13, {TE::Reduce, 13}}, {14, {TE::Reduce, 13}}},
+    Row {{3, {TE::Transit, 17}}, {4, {TE::Reduce, 13}}, {5, {TE::Reduce, 13}}, {6, {TE::Reduce, 13}}, {7, {TE::Reduce, 13}}, {8, {TE::Reduce, 13}}, {9, {TE::Reduce, 13}}, {10, {TE::Reduce, 13}}, {11, {TE::Reduce, 13}}, {12, {TE::Reduce, 13}}, {14, {TE::Reduce, 13}}, {15, {TE::Reduce, 13}}},
+    Row {{0, {TE::Transit, 16}}, {1, {TE::Transit, 2}}, {2, {TE::Transit, 3}}, {4, {TE::Shift, 4}}, {5, {TE::Shift, 5}}, {6, {TE::Shift, 6}}, {7, {TE::Shift, 7}}, {8, {TE::Shift, 8}}, {9, {TE::Shift, 9}}, {10, {TE::Shift, 10}}, {11, {TE::Shift, 11}}, {12, {TE::Shift, 12}}, {13, {TE::Shift, 15}}, {14, {TE::Shift, 13}}},
+    Row {{4, {TE::Reduce, 11}}, {5, {TE::Reduce, 11}}, {6, {TE::Reduce, 11}}, {7, {TE::Reduce, 11}}, {8, {TE::Reduce, 11}}, {9, {TE::Reduce, 11}}, {10, {TE::Reduce, 11}}, {11, {TE::Reduce, 11}}, {12, {TE::Reduce, 11}}, {13, {TE::Reduce, 11}}, {14, {TE::Reduce, 11}}, {15, {TE::Reduce, 11}}, {16, {TE::Reduce, 11}}},
+    Row {{4, {TE::Reduce, 14}}, {5, {TE::Reduce, 14}}, {6, {TE::Reduce, 14}}, {7, {TE::Reduce, 14}}, {8, {TE::Reduce, 14}}, {9, {TE::Reduce, 14}}, {10, {TE::Reduce, 14}}, {11, {TE::Reduce, 14}}, {12, {TE::Reduce, 14}}, {13, {TE::Reduce, 14}}, {14, {TE::Reduce, 14}}, {15, {TE::Reduce, 14}}},
+    Row {{0, {TE::Transit, 16}}, {1, {TE::Transit, 2}}, {2, {TE::Transit, 3}}, {4, {TE::Shift, 4}}, {5, {TE::Shift, 5}}, {6, {TE::Shift, 6}}, {7, {TE::Shift, 7}}, {8, {TE::Shift, 8}}, {9, {TE::Shift, 9}}, {10, {TE::Shift, 10}}, {11, {TE::Shift, 11}}, {12, {TE::Shift, 12}}, {14, {TE::Shift, 13}}, {15, {TE::Shift, 18}}},
+    Row {{4, {TE::Reduce, 12}}, {5, {TE::Reduce, 12}}, {6, {TE::Reduce, 12}}, {7, {TE::Reduce, 12}}, {8, {TE::Reduce, 12}}, {9, {TE::Reduce, 12}}, {10, {TE::Reduce, 12}}, {11, {TE::Reduce, 12}}, {12, {TE::Reduce, 12}}, {13, {TE::Reduce, 12}}, {14, {TE::Reduce, 12}}, {15, {TE::Reduce, 12}}, {16, {TE::Reduce, 12}}}
 };
 // clang-format on
 

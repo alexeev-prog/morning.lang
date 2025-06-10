@@ -6,6 +6,10 @@
  * 2. Улучшена читаемость с сохранением структуры
  * 3. Исправлена опечатка в токене STRING -> STRING
  * 4. Явное разделение целых/дробных чисел
+ * 5. Добавлена поддержка булевых значений и nil
+ * 6. Добавлена обработка escape-последовательностей в строках
+ * 7. Расширена поддержка чисел с плавающей точкой
+ * 8. Добавлены комментарии к типам данных
  */
 
 %lex
@@ -15,6 +19,8 @@
 \/\/.*                          %empty
 \/\*[\s\S]*?\*\/                %empty
 
+"nil"                           NIL
+
 [-+]?0x[0-9a-fA-F]+             HEX
 [-+]?0b[01]+                    BINARY
 [-+]?0[0-7]+                    OCTAL
@@ -22,12 +28,11 @@
 [-+]?\d+\.\d*([eE][-+]?\d+)?    FRACTIONAL
 [-+]?\.\d+([eE][-+]?\d+)?       FRACTIONAL
 [-+]?\d+[eE][-+]?\d+            FRACTIONAL
-
-[-+]?(0|[1-9][0-9]*)            DECIMAL
+[-+]?\d+                        DECIMAL
 
 \s+                             %empty
-\"[^\"]*\"                      STRING
-[\w\-+*=!<>/]+                  SYMBOL
+\"(\\.|[^"\\])*\"               STRING
+[\w\-+*=!<>/#]+                 SYMBOL
 
 /lex
 
@@ -36,6 +41,7 @@
 #include <vector>
 #include <cctype>
 #include <cmath>
+#include <cstdlib>
 
 enum class ExpType {
     NUMBER,
@@ -43,6 +49,7 @@ enum class ExpType {
     STRING,
     SYMBOL,
     LIST,
+    NIL
 };
 
 struct Exp {
@@ -53,13 +60,14 @@ struct Exp {
     std::string string;
     std::vector<Exp> list;
 
+    Exp() : type(ExpType::NIL) {}
     Exp(int number) : type(ExpType::NUMBER), number(number) {}
     Exp(double fractional) : type(ExpType::FRACTIONAL), fractional(fractional) {}
 
     Exp(std::string& str_value) {
         if (str_value[0] == '"') {
             type = ExpType::STRING;
-            string = str_value.substr(1, str_value.size() - 2);
+            string = unescape(str_value.substr(1, str_value.size() - 2));
         } else {
             type = ExpType::SYMBOL;
             string = str_value;
@@ -67,6 +75,26 @@ struct Exp {
     }
 
     Exp(std::vector<Exp> list) : type(ExpType::LIST), list(list) {}
+
+private:
+    std::string unescape(const std::string& s) {
+        std::string result;
+        for (size_t i = 0; i < s.length(); ++i) {
+            if (s[i] == '\\') {
+                switch (s[++i]) {
+                    case 'n': result += '\n'; break;
+                    case 't': result += '\t'; break;
+                    case 'r': result += '\r'; break;
+                    case '"': result += '"'; break;
+                    case '\\': result += '\\'; break;
+                    default: result += '\\' + s[i];
+                }
+            } else {
+                result += s[i];
+            }
+        }
+        return result;
+    }
 };
 
 using Value = Exp;
@@ -114,6 +142,7 @@ int parseInteger(const std::string& str) {
 %token FRACTIONAL
 %token STRING
 %token SYMBOL
+%token NIL
 
 %%
 
@@ -130,6 +159,7 @@ Atom
     | FRACTIONAL { $$ = Exp(std::stod($1)) }
     | STRING    { $$ = Exp($1) }
     | SYMBOL    { $$ = Exp($1) }
+    | NIL       { $$ = Exp() }
     ;
 
 List

@@ -7,25 +7,35 @@
 
 #include "llvm/IR/Value.h"
 #include "logger.h"
+#include "tracelogger.hpp"
 
 class Environment : public std::enable_shared_from_this<Environment> {
   public:
     Environment(std::map<std::string, llvm::Value*> record, std::shared_ptr<Environment> parent)
         : m_RECORD(std::move(record))
-        , m_PARENT(std::move(parent)) {}
+        , m_PARENT(std::move(parent)) {
+            LOG_TRACE
+
+        }
 
     auto define(const std::string& var_name, llvm::Value* value) -> llvm::Value* {
+        LOG_TRACE
+
         m_RECORD[var_name] = value;
 
         return value;
     }
 
     auto lookup_by_name(const std::string& var_name) -> llvm::Value* {
+        LOG_TRACE
+
         return resolve(var_name)->m_RECORD[var_name];
     }
 
   private:
     auto resolve(const std::string& name) -> std::shared_ptr<Environment> {
+        LOG_TRACE
+
         if (m_RECORD.count(name) != 0) {
             return shared_from_this();
         }
