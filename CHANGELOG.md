@@ -1,3 +1,9 @@
+commit ebbbf7bb969a3503e010eb3fe321bb7f243bece4
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Tue Jun 10 17:58:48 2025 +0700
+
+    fix build script, fix errors, add class fields&methods
+
 commit 47f88c117bd3538c491b1bd6e13ce22d5a90ab50
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Tue Jun 10 02:29:20 2025 +0700

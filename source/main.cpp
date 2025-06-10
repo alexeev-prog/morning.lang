@@ -11,8 +11,9 @@ auto main() -> int {
         (var width 0)
         (var height 0)
 
-        (method create(this x y width height)
+        (method init(this x y width height)
             [scope
+                0
                 (set (property this x) x)
                 (set (property this y) y)
                 (set (property this width) width)
@@ -21,14 +22,14 @@ auto main() -> int {
         )
 
         (method areasize(this)
+            0
             (* (property this width) (property this height))
         )
     ]
 ]
 
 (var square (newobj Figure 0 0 100 100))
-(fprint "Square %d x %d" [property square width] [property square height])
-
+// (fprint "Square %d x %d" [property square width] [property square height])
     )";
 
     MorningLanguageLLVM morning_vm;
