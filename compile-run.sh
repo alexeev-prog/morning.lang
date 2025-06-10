@@ -2,7 +2,8 @@
 
 bash build.sh all
 ./build/bin/morninglang
-lli ./out.ll
+# lli ./out.ll
+clang++ -O3 -lgc -Igc out.ll -o out.bin
 
 echo $?
 

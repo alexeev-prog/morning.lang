@@ -182,6 +182,33 @@ Online docs available on [this link](https://alexeev-prog.github.io/morning.lang
 [fprint "sum 100 1: %d\n\n" (sum 100 1)]
 ```
 
+ + Basic OOP:
+
+```
+[class Figure self
+    [scope
+        (var width 0)
+        (var height 0)
+
+        (func init (this width height)
+            [scope
+                0
+                // (set (property this width) width)
+                // (set (property this height) height)
+            ]
+        )
+
+        (func area (this)
+            0
+            // (+ (property this width) (property this height))
+        )
+    ]
+]
+
+(var square (newobj Figure 10 10))
+(fprint "Square %d X %d" (property square width) (property square height))
+```
+
 ## Join the Community! 🌐
 
 - **GitHub Issues** — for bug reporting and feature requests.
