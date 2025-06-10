@@ -13,17 +13,13 @@ auto main() -> int {
 
         (method init(this x y width height)
             [scope
-                0
-                (set (property this x) x)
-                (set (property this y) y)
                 (set (property this width) width)
                 (set (property this height) height)
             ]
         )
 
-        (method areasize(this)
-            0
-            (* (property this width) (property this height))
+        (func area (this)
+            (+ (property this width) (property this height))
         )
     ]
 ]
