@@ -165,6 +165,7 @@ Atom
 List
     : '[' ListEntries ']' { $$ = $2 }
     | '(' ListEntries ')' { $$ = $2 }
+    | '{' ListEntries '}' { $$ = $2 }
     ;
 
 ListEntries

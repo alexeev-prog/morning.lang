@@ -1,3 +1,9 @@
+commit 47f88c117bd3538c491b1bd6e13ce22d5a90ab50
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Tue Jun 10 02:29:20 2025 +0700
+
+    add basic object syntax
+
 commit 3d0a78cd1089ad2d5b1f03e00f6c2ec2baf9833c
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Mon Jun 9 02:21:51 2025 +0700

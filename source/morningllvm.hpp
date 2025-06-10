@@ -78,6 +78,23 @@ inline auto has_return_type(const Exp& fn_exp) -> bool {
     return fn_exp.list[3].type == ExpType::SYMBOL && fn_exp.list[3].string == "->";
 }
 
+/**
+ * @brief Check is tagged list or not
+ *
+ * @param exp expression
+ * @param tag tag
+ * @return true
+ * @return false
+ **/
+auto is_tagged_list(const Exp& exp, const std::string& tag) -> bool {
+    return exp.type == ExpType::LIST && exp.list[0].type == ExpType::SYMBOL &&
+                                        exp.list[0].string == tag;
+}
+
+auto is_var(const Exp& exp) -> bool { return is_tagged_list(exp, "var"); }
+
+auto is_method(const Exp& exp) -> bool { return is_tagged_list(exp, "method"); }
+
 struct ClassInfo {
     llvm::StructType* cls_object;
     llvm::StructType* parent;
@@ -352,8 +369,12 @@ class MorningLanguageLLVM {
         std::vector<llvm::Type*> param_types {};
 
         for (auto& param : params.list) {
+            auto param_name = extract_var_name(param);
             auto* param_type = extract_var_type(param);
-            param_types.push_back(param_type);
+
+            param_types.push_back(
+                param_name == "this" ? (llvm::Type*)m_CURRENT_CLASS->getPointerTo() : param_type
+            );
         }
 
         return llvm::FunctionType::get(return_type, param_types, /* varargs */ false);
@@ -387,7 +408,7 @@ class MorningLanguageLLVM {
      * @param env parent environment
      * @return llvm::Value*
      **/
-    auto compile_function(const Exp& fn_exp, const std::string& fn_name, const env& env) -> llvm::Value* {
+    auto compile_function(const Exp& fn_exp, std::string fn_name, const env& env) -> llvm::Value* {
         auto params = fn_exp.list[2];
         auto body = has_return_type(fn_exp) ? fn_exp.list[5] : fn_exp.list[3];
 
@@ -439,15 +460,6 @@ class MorningLanguageLLVM {
         // TODO
     }
 
-    auto is_tagged_list(const Exp& exp, const std::string& tag) -> bool {
-        return exp.type == ExpType::LIST && exp.list[0].type == ExpType::SYMBOL &&
-                                            exp.list[0].string == tag;
-    }
-
-    auto is_var(const Exp& exp) -> bool { return is_tagged_list(exp, "var"); }
-
-    auto is_method(const Exp& exp) -> bool { return is_tagged_list(exp, "method"); }
-
     void build_class_body(llvm::StructType* cls) {
         std::string class_name(cls->getName().data());
         auto* class_info = &m_CLASS_MAP[class_name];
@@ -458,6 +470,9 @@ class MorningLanguageLLVM {
         }
 
         cls->setBody(cls_fields, false);
+
+        // Methods:
+        // TODO (vTable)
     }
 
     void build_class_info(llvm::StructType* cls, const Exp& cls_exp, const env& env) {
@@ -478,7 +493,8 @@ class MorningLanguageLLVM {
                 class_info->fields_map[field_name] = field_type;
             } else if (is_method(exp)) {
                 auto method_name = exp.list[1].string;
-                auto fn_name = class_name + "_" + method_name;
+                auto fn_name = class_name + "_";
+                fn_name.append(method_name);
 
                 class_info->methods_map[method_name] = create_function_prototype(fn_name, extract_function_type(exp), env);
             }
@@ -586,8 +602,10 @@ class MorningLanguageLLVM {
                     }
 
                     // Create function
-                    if (oper == "func") {
-                        return compile_function(exp, /* name */ exp.list[1].string, env);
+                    if (oper == "func" || oper == "method") {
+                        if ((oper == "method" && m_CURRENT_CLASS != nullptr) || (oper == "func" && m_CURRENT_CLASS == nullptr)) {
+                            return compile_function(exp, /* name */ exp.list[1].string, env);
+                        }
                     }
 
                     // Typical while
@@ -667,6 +685,10 @@ class MorningLanguageLLVM {
 
                     // Create a variable
                     if (oper == "var") {
+                        if (m_CURRENT_CLASS != nullptr) {
+                            return m_IR_BUILDER->getInt64(0);
+                        }
+
                         auto var_name_declaration = exp.list[1];
                         auto var_name = extract_var_name(var_name_declaration);
 
