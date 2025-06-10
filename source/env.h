@@ -14,9 +14,8 @@ class Environment : public std::enable_shared_from_this<Environment> {
     Environment(std::map<std::string, llvm::Value*> record, std::shared_ptr<Environment> parent)
         : m_RECORD(std::move(record))
         , m_PARENT(std::move(parent)) {
-            LOG_TRACE
-
-        }
+        LOG_TRACE
+    }
 
     auto define(const std::string& var_name, llvm::Value* value) -> llvm::Value* {
         LOG_TRACE

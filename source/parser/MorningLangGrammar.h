@@ -20,7 +20,6 @@
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunused-private-field"
 
-#include <assert.h>
 #include <array>
 #include <iostream>
 #include <map>
@@ -29,6 +28,8 @@
 #include <sstream>
 #include <string>
 #include <vector>
+
+#include <assert.h>
 
 // ------------------------------------
 // Module include prologue.
@@ -144,14 +145,14 @@ int parseInteger(const std::string& str) {
 
     int value = std::stoi(s, &pos, base);
     return negative ? -value : value;
-}  // clang-format on
+}    // clang-format on
 
 namespace syntax {
 
-/**
- * Tokenizer class.
- */
-// clang-format off
+    /**
+     * Tokenizer class.
+     */
+    // clang-format off
 /**
  * Generic tokenizer used by the parser in the Syntax tool.
  *
@@ -182,287 +183,288 @@ enum class TokenType {
   TOKEN_TYPE_14 = 14,
   TOKEN_TYPE_15 = 15,
   __EOF = 16
-  // clang-format on
-};
+        // clang-format on
+    };
 
-// ------------------------------------------------------------------
-// Token.
+    // ------------------------------------------------------------------
+    // Token.
 
-struct Token {
-  TokenType type;
-  std::string value;
+    struct Token
+    {
+        TokenType type;
+        std::string value;
 
-  int startOffset;
-  int endOffset;
-  int startLine;
-  int endLine;
-  int startColumn;
-  int endColumn;
-};
+        int startOffset;
+        int endOffset;
+        int startLine;
+        int endLine;
+        int startColumn;
+        int endColumn;
+    };
 
-using SharedToken = std::shared_ptr<Token>;
+    using SharedToken = std::shared_ptr<Token>;
 
-typedef TokenType (*LexRuleHandler)(const Tokenizer&, const std::string&);
+    typedef TokenType (*LexRuleHandler)(const Tokenizer&, const std::string&);
 
-// ------------------------------------------------------------------
-// Lex rule: [regex, handler]
+    // ------------------------------------------------------------------
+    // Lex rule: [regex, handler]
 
-struct LexRule {
-  std::regex regex;
-  LexRuleHandler handler;
-};
+    struct LexRule
+    {
+        std::regex regex;
+        LexRuleHandler handler;
+    };
 
-// ------------------------------------------------------------------
-// Token.
+    // ------------------------------------------------------------------
+    // Token.
 
-enum TokenizerState {
-  // clang-format off
+    enum TokenizerState
+    {
+        // clang-format off
   INITIAL
-  // clang-format on
-};
+        // clang-format on
+    };
 
-// ------------------------------------------------------------------
-// Tokenizer.
+    // ------------------------------------------------------------------
+    // Tokenizer.
 
-class Tokenizer {
- public:
-  /**
-   * Initializes a parsing string.
-   */
-  void initString(const std::string& str) {
-    str_ = str;
+    class Tokenizer {
+      public:
+        /**
+         * Initializes a parsing string.
+         */
+        void initString(const std::string& str) {
+            str_ = str;
 
-    // Initialize states.
-    states_.clear();
-    states_.push_back(TokenizerState::INITIAL);
+            // Initialize states.
+            states_.clear();
+            states_.push_back(TokenizerState::INITIAL);
 
-    cursor_ = 0;
-    currentLine_ = 1;
-    currentColumn_ = 0;
-    currentLineBeginOffset_ = 0;
+            cursor_ = 0;
+            currentLine_ = 1;
+            currentColumn_ = 0;
+            currentLineBeginOffset_ = 0;
 
-    tokenStartOffset_ = 0;
-    tokenEndOffset_ = 0;
-    tokenStartLine_ = 0;
-    tokenEndLine_ = 0;
-    tokenStartColumn_ = 0;
-    tokenEndColumn_ = 0;
-  }
-
-  /**
-   * Whether there are still tokens in the stream.
-   */
-  inline bool hasMoreTokens() { return cursor_ <= str_.length(); }
-
-  /**
-   * Returns current tokenizing state.
-   */
-  TokenizerState getCurrentState() { return states_.back(); }
-
-  /**
-   * Enters a new state pushing it on the states stack.
-   */
-  void pushState(TokenizerState state) { states_.push_back(state); }
-
-  /**
-   * Alias for `push_state`.
-   */
-  void begin(TokenizerState state) { states_.push_back(state); }
-
-  /**
-   * Exits a current state popping it from the states stack.
-   */
-  TokenizerState popState() {
-    auto state = states_.back();
-    states_.pop_back();
-    return state;
-  }
-
-  /**
-   * Returns next token.
-   */
-  SharedToken getNextToken() {
-    if (!hasMoreTokens()) {
-      yytext = __EOF;
-      return toToken(TokenType::__EOF);
-    }
-
-    auto strSlice = str_.substr(cursor_);
-
-    auto lexRulesForState = lexRulesByStartConditions_.at(getCurrentState());
-
-    for (const auto& ruleIndex : lexRulesForState) {
-      auto rule = lexRules_[ruleIndex];
-      std::smatch sm;
-
-      if (std::regex_search(strSlice, sm, rule.regex)) {
-        yytext = sm[0];
-
-        captureLocations_(yytext);
-        cursor_ += yytext.length();
-
-        // Manual handling of EOF token (the end of string). Return it
-        // as `EOF` symbol.
-        if (yytext.length() == 0) {
-          cursor_++;
+            tokenStartOffset_ = 0;
+            tokenEndOffset_ = 0;
+            tokenStartLine_ = 0;
+            tokenEndLine_ = 0;
+            tokenStartColumn_ = 0;
+            tokenEndColumn_ = 0;
         }
 
-        auto tokenType = rule.handler(*this, yytext);
+        /**
+         * Whether there are still tokens in the stream.
+         */
+        inline bool hasMoreTokens() { return cursor_ <= str_.length(); }
 
-        if (tokenType == TokenType::__EMPTY) {
-          return getNextToken();
+        /**
+         * Returns current tokenizing state.
+         */
+        TokenizerState getCurrentState() { return states_.back(); }
+
+        /**
+         * Enters a new state pushing it on the states stack.
+         */
+        void pushState(TokenizerState state) { states_.push_back(state); }
+
+        /**
+         * Alias for `push_state`.
+         */
+        void begin(TokenizerState state) { states_.push_back(state); }
+
+        /**
+         * Exits a current state popping it from the states stack.
+         */
+        TokenizerState popState() {
+            auto state = states_.back();
+            states_.pop_back();
+            return state;
         }
 
-        return toToken(tokenType);
-      }
-    }
+        /**
+         * Returns next token.
+         */
+        SharedToken getNextToken() {
+            if (!hasMoreTokens()) {
+                yytext = __EOF;
+                return toToken(TokenType::__EOF);
+            }
 
-    if (isEOF()) {
-      cursor_++;
-      yytext = __EOF;
-      return toToken(TokenType::__EOF);
-    }
+            auto strSlice = str_.substr(cursor_);
 
-    throwUnexpectedToken(std::string(1, strSlice[0]), currentLine_,
-                         currentColumn_);
-  }
+            auto lexRulesForState = lexRulesByStartConditions_.at(getCurrentState());
 
-  /**
-   * Whether the cursor is at the EOF.
-   */
-  inline bool isEOF() { return cursor_ == str_.length(); }
+            for (const auto& ruleIndex : lexRulesForState) {
+                auto rule = lexRules_[ruleIndex];
+                std::smatch sm;
 
-  SharedToken toToken(TokenType tokenType) {
-    return std::shared_ptr<Token>(new Token{
-        .type = tokenType,
-        .value = yytext,
-        .startOffset = tokenStartOffset_,
-        .endOffset = tokenEndOffset_,
-        .startLine = tokenStartLine_,
-        .endLine = tokenEndLine_,
-        .startColumn = tokenStartColumn_,
-        .endColumn = tokenEndColumn_,
-    });
-  }
+                if (std::regex_search(strSlice, sm, rule.regex)) {
+                    yytext = sm[0];
 
-  /**
-   * Throws default "Unexpected token" exception, showing the actual
-   * line from the source, pointing with the ^ marker to the bad token.
-   * In addition, shows `line:column` location.
-   */
-  [[noreturn]] void throwUnexpectedToken(const std::string& symbol, int line,
-                                         int column) {
-    std::stringstream ss{str_};
-    std::string lineStr;
-    int currentLine = 1;
+                    captureLocations_(yytext);
+                    cursor_ += yytext.length();
 
-    while (currentLine++ <= line) {
-      std::getline(ss, lineStr, '\n');
-    }
+                    // Manual handling of EOF token (the end of string). Return it
+                    // as `EOF` symbol.
+                    if (yytext.length() == 0) {
+                        cursor_++;
+                    }
 
-    auto pad = std::string(column, ' ');
+                    auto tokenType = rule.handler(*this, yytext);
 
-    std::stringstream errMsg;
+                    if (tokenType == TokenType::__EMPTY) {
+                        return getNextToken();
+                    }
 
-    errMsg << "Syntax Error:\n\n"
-           << lineStr << "\n"
-           << pad << "^\nUnexpected token \"" << symbol << "\" at " << line
-           << ":" << column << "\n\n";
+                    return toToken(tokenType);
+                }
+            }
 
-    std::cerr << errMsg.str();
-    throw new std::runtime_error(errMsg.str().c_str());
-  }
+            if (isEOF()) {
+                cursor_++;
+                yytext = __EOF;
+                return toToken(TokenType::__EOF);
+            }
 
-  /**
-   * Matched text.
-   */
-  std::string yytext;
+            throwUnexpectedToken(std::string(1, strSlice[0]), currentLine_, currentColumn_);
+        }
 
- private:
-  /**
-   * Captures token locations.
-   */
-  void captureLocations_(const std::string& matched) {
-    auto len = matched.length();
+        /**
+         * Whether the cursor is at the EOF.
+         */
+        inline bool isEOF() { return cursor_ == str_.length(); }
 
-    // Absolute offsets.
-    tokenStartOffset_ = cursor_;
+        SharedToken toToken(TokenType tokenType) {
+            return std::shared_ptr<Token>(new Token {
+                .type = tokenType,
+                .value = yytext,
+                .startOffset = tokenStartOffset_,
+                .endOffset = tokenEndOffset_,
+                .startLine = tokenStartLine_,
+                .endLine = tokenEndLine_,
+                .startColumn = tokenStartColumn_,
+                .endColumn = tokenEndColumn_,
+            });
+        }
 
-    // Line-based locations, start.
-    tokenStartLine_ = currentLine_;
-    tokenStartColumn_ = tokenStartOffset_ - currentLineBeginOffset_;
+        /**
+         * Throws default "Unexpected token" exception, showing the actual
+         * line from the source, pointing with the ^ marker to the bad token.
+         * In addition, shows `line:column` location.
+         */
+        [[noreturn]] void throwUnexpectedToken(const std::string& symbol, int line, int column) {
+            std::stringstream ss {str_};
+            std::string lineStr;
+            int currentLine = 1;
 
-    // Extract `\n` in the matched token.
-    std::stringstream ss{matched};
-    std::string lineStr;
-    std::getline(ss, lineStr, '\n');
-    while (ss.tellg() > 0 && ss.tellg() <= len) {
-      currentLine_++;
-      currentLineBeginOffset_ = tokenStartOffset_ + ss.tellg();
-      std::getline(ss, lineStr, '\n');
-    }
+            while (currentLine++ <= line) {
+                std::getline(ss, lineStr, '\n');
+            }
 
-    tokenEndOffset_ = cursor_ + len;
+            auto pad = std::string(column, ' ');
 
-    // Line-based locations, end.
-    tokenEndLine_ = currentLine_;
-    tokenEndColumn_ = tokenEndOffset_ - currentLineBeginOffset_;
-    currentColumn_ = tokenEndColumn_;
-  }
+            std::stringstream errMsg;
 
-  /**
-   * Lexical rules.
-   */
-  // clang-format off
+            errMsg << "Syntax Error:\n\n"
+                   << lineStr << "\n"
+                   << pad << "^\nUnexpected token \"" << symbol << "\" at " << line << ":" << column
+                   << "\n\n";
+
+            std::cerr << errMsg.str();
+            throw new std::runtime_error(errMsg.str().c_str());
+        }
+
+        /**
+         * Matched text.
+         */
+        std::string yytext;
+
+      private:
+        /**
+         * Captures token locations.
+         */
+        void captureLocations_(const std::string& matched) {
+            auto len = matched.length();
+
+            // Absolute offsets.
+            tokenStartOffset_ = cursor_;
+
+            // Line-based locations, start.
+            tokenStartLine_ = currentLine_;
+            tokenStartColumn_ = tokenStartOffset_ - currentLineBeginOffset_;
+
+            // Extract `\n` in the matched token.
+            std::stringstream ss {matched};
+            std::string lineStr;
+            std::getline(ss, lineStr, '\n');
+            while (ss.tellg() > 0 && ss.tellg() <= len) {
+                currentLine_++;
+                currentLineBeginOffset_ = tokenStartOffset_ + ss.tellg();
+                std::getline(ss, lineStr, '\n');
+            }
+
+            tokenEndOffset_ = cursor_ + len;
+
+            // Line-based locations, end.
+            tokenEndLine_ = currentLine_;
+            tokenEndColumn_ = tokenEndOffset_ - currentLineBeginOffset_;
+            currentColumn_ = tokenEndColumn_;
+        }
+
+        /**
+         * Lexical rules.
+         */
+        // clang-format off
   static constexpr size_t LEX_RULES_COUNT = 17;
   static std::array<LexRule, LEX_RULES_COUNT> lexRules_;
   static std::map<TokenizerState, std::vector<size_t>> lexRulesByStartConditions_;
-  // clang-format on
+        // clang-format on
 
-  /**
-   * Special EOF token.
-   */
-  static std::string __EOF;
+        /**
+         * Special EOF token.
+         */
+        static std::string __EOF;
 
-  /**
-   * Tokenizing string.
-   */
-  std::string str_;
+        /**
+         * Tokenizing string.
+         */
+        std::string str_;
 
-  /**
-   * Cursor for current symbol.
-   */
-  int cursor_;
+        /**
+         * Cursor for current symbol.
+         */
+        int cursor_;
 
-  /**
-   * States.
-   */
-  std::vector<TokenizerState> states_;
+        /**
+         * States.
+         */
+        std::vector<TokenizerState> states_;
 
-  /**
-   * Line-based location tracking.
-   */
-  int currentLine_;
-  int currentColumn_;
-  int currentLineBeginOffset_;
+        /**
+         * Line-based location tracking.
+         */
+        int currentLine_;
+        int currentColumn_;
+        int currentLineBeginOffset_;
 
-  /**
-   * Location data of a matched token.
-   */
-  int tokenStartOffset_;
-  int tokenEndOffset_;
-  int tokenStartLine_;
-  int tokenEndLine_;
-  int tokenStartColumn_;
-  int tokenEndColumn_;
-};
+        /**
+         * Location data of a matched token.
+         */
+        int tokenStartOffset_;
+        int tokenEndOffset_;
+        int tokenStartLine_;
+        int tokenEndLine_;
+        int tokenStartColumn_;
+        int tokenEndColumn_;
+    };
 
-// ------------------------------------------------------------------
-// Lexical rule handlers.
+    // ------------------------------------------------------------------
+    // Lexical rule handlers.
 
-std::string Tokenizer::__EOF("$");
+    std::string Tokenizer::__EOF("$");
 
-// clang-format off
+    // clang-format off
 inline TokenType _lexRule1(const Tokenizer& tokenizer, const std::string& yytext) {
 return TokenType::TOKEN_TYPE_12;
 }
@@ -530,12 +532,13 @@ return TokenType::STRING;
 inline TokenType _lexRule17(const Tokenizer& tokenizer, const std::string& yytext) {
 return TokenType::SYMBOL;
 }
-// clang-format on
 
-// ------------------------------------------------------------------
-// Lexical rules.
+    // clang-format on
 
-// clang-format off
+    // ------------------------------------------------------------------
+    // Lexical rules.
+
+    // clang-format off
 std::array<LexRule, Tokenizer::LEX_RULES_COUNT> Tokenizer::lexRules_ = {{
   {std::regex(R"(^\[)"), &_lexRule1},
   {std::regex(R"(^\])"), &_lexRule2},
@@ -556,219 +559,222 @@ std::array<LexRule, Tokenizer::LEX_RULES_COUNT> Tokenizer::lexRules_ = {{
   {std::regex(R"(^[\w\-+*=!<>/#]+)"), &_lexRule17}
 }};
 std::map<TokenizerState, std::vector<size_t>> Tokenizer::lexRulesByStartConditions_ =  {{TokenizerState::INITIAL, {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}}};
-// clang-format on
+    // clang-format on
 
 #endif
-// clang-format on
+    // clang-format on
 
-#define POP_V()              \
-  parser.valuesStack.back(); \
-  parser.valuesStack.pop_back()
+#define POP_V() \
+    parser.valuesStack.back(); \
+    parser.valuesStack.pop_back()
 
-#define POP_T()              \
-  parser.tokensStack.back(); \
-  parser.tokensStack.pop_back()
+#define POP_T() \
+    parser.tokensStack.back(); \
+    parser.tokensStack.pop_back()
 
 #define PUSH_VR() parser.valuesStack.push_back(__)
 #define PUSH_TR() parser.tokensStack.push_back(__)
 
-/**
- * Parsing table type.
- */
-enum class TE {
-  Accept,
-  Shift,
-  Reduce,
-  Transit,
-};
+    /**
+     * Parsing table type.
+     */
+    enum class TE
+    {
+        Accept,
+        Shift,
+        Reduce,
+        Transit,
+    };
 
-/**
- * Parsing table entry.
- */
-struct TableEntry {
-  TE type;
-  int value;
-};
+    /**
+     * Parsing table entry.
+     */
+    struct TableEntry
+    {
+        TE type;
+        int value;
+    };
 
-// clang-format off
-class MorningLangGrammar;
-// clang-format on
-
-using yyparse = MorningLangGrammar;
-
-typedef void (*ProductionHandler)(yyparse&);
-
-/**
- * Encoded production.
- *
- * opcode - encoded index
- * rhsLength - length of the RHS to pop.
- */
-struct Production {
-  int opcode;
-  int rhsLength;
-  ProductionHandler handler;
-};
-
-// Key: Encoded symbol (terminal or non-terminal) index
-// Value: TableEntry
-using Row = std::map<int, TableEntry>;
-
-/**
- * Parser class.
- */
-// clang-format off
-class MorningLangGrammar {
-  // clang-format on
- public:
-  /**
-   * Parsing values stack.
-   */
-  std::vector<Value> valuesStack;
-
-  /**
-   * Token values stack.
-   */
-  std::vector<std::string> tokensStack;
-
-  /**
-   * Parsing states stack.
-   */
-  std::vector<int> statesStack;
-
-  /**
-   * Tokenizer.
-   */
-  Tokenizer tokenizer;
-
-  /**
-   * Previous state to calculate the next one.
-   */
-  int previousState;
-
-  /**
-   * Parses a string.
-   */
-  Value parse(const std::string& str) {
     // clang-format off
-    
+class MorningLangGrammar;
     // clang-format on
 
-    // Initialize the tokenizer and the string.
-    tokenizer.initString(str);
+    using yyparse = MorningLangGrammar;
 
-    // Initialize the stacks.
-    valuesStack.clear();
-    tokensStack.clear();
-    statesStack.clear();
+    typedef void (*ProductionHandler)(yyparse&);
 
-    // Initial 0 state.
-    statesStack.push_back(0);
+    /**
+     * Encoded production.
+     *
+     * opcode - encoded index
+     * rhsLength - length of the RHS to pop.
+     */
+    struct Production
+    {
+        int opcode;
+        int rhsLength;
+        ProductionHandler handler;
+    };
 
-    auto token = tokenizer.getNextToken();
-    auto shiftedToken = token;
+    // Key: Encoded symbol (terminal or non-terminal) index
+    // Value: TableEntry
+    using Row = std::map<int, TableEntry>;
 
-    // Main parsing loop.
-    for (;;) {
-      auto state = statesStack.back();
-      auto column = (int)token->type;
+    /**
+     * Parser class.
+     */
+    // clang-format off
+class MorningLangGrammar {
+        // clang-format on
+      public:
+        /**
+         * Parsing values stack.
+         */
+        std::vector<Value> valuesStack;
 
-      if (table_[state].count(column) == 0) {
-        throwUnexpectedToken(token);
-      }
+        /**
+         * Token values stack.
+         */
+        std::vector<std::string> tokensStack;
 
-      auto entry = table_[state].at(column);
+        /**
+         * Parsing states stack.
+         */
+        std::vector<int> statesStack;
 
-      // Shift a token, go to state.
-      if (entry.type == TE::Shift) {
-        // Push token.
-        tokensStack.push_back(token->value);
+        /**
+         * Tokenizer.
+         */
+        Tokenizer tokenizer;
 
-        // Push next state number: "s5" -> 5
-        statesStack.push_back(entry.value);
+        /**
+         * Previous state to calculate the next one.
+         */
+        int previousState;
 
-        shiftedToken = token;
-        token = tokenizer.getNextToken();
-      }
+        /**
+         * Parses a string.
+         */
+        Value parse(const std::string& str) {
+            // clang-format off
 
-      // Reduce by production.
-      else if (entry.type == TE::Reduce) {
-        auto productionNumber = entry.value;
-        auto production = productions_[productionNumber];
+            // clang-format on
 
-        tokenizer.yytext = shiftedToken->value;
+            // Initialize the tokenizer and the string.
+            tokenizer.initString(str);
 
-        auto rhsLength = production.rhsLength;
-        while (rhsLength > 0) {
-          statesStack.pop_back();
-          rhsLength--;
-        }
+            // Initialize the stacks.
+            valuesStack.clear();
+            tokensStack.clear();
+            statesStack.clear();
 
-        // Call the handler.
-        production.handler(*this);
+            // Initial 0 state.
+            statesStack.push_back(0);
 
-        auto previousState = statesStack.back();
+            auto token = tokenizer.getNextToken();
+            auto shiftedToken = token;
 
-        auto symbolToReduceWith = production.opcode;
-        auto nextStateEntry = table_[previousState].at(symbolToReduceWith);
-        assert(nextStateEntry.type == TE::Transit);
+            // Main parsing loop.
+            for (;;) {
+                auto state = statesStack.back();
+                auto column = (int)token->type;
 
-        statesStack.push_back(nextStateEntry.value);
-      }
+                if (table_[state].count(column) == 0) {
+                    throwUnexpectedToken(token);
+                }
 
-      // Accept the string.
-      else if (entry.type == TE::Accept) {
-        // Pop state number.
-        statesStack.pop_back();
+                auto entry = table_[state].at(column);
 
-        // Pop the parsed value.
-        // clang-format off
+                // Shift a token, go to state.
+                if (entry.type == TE::Shift) {
+                    // Push token.
+                    tokensStack.push_back(token->value);
+
+                    // Push next state number: "s5" -> 5
+                    statesStack.push_back(entry.value);
+
+                    shiftedToken = token;
+                    token = tokenizer.getNextToken();
+                }
+
+                // Reduce by production.
+                else if (entry.type == TE::Reduce)
+                {
+                    auto productionNumber = entry.value;
+                    auto production = productions_[productionNumber];
+
+                    tokenizer.yytext = shiftedToken->value;
+
+                    auto rhsLength = production.rhsLength;
+                    while (rhsLength > 0) {
+                        statesStack.pop_back();
+                        rhsLength--;
+                    }
+
+                    // Call the handler.
+                    production.handler(*this);
+
+                    auto previousState = statesStack.back();
+
+                    auto symbolToReduceWith = production.opcode;
+                    auto nextStateEntry = table_[previousState].at(symbolToReduceWith);
+                    assert(nextStateEntry.type == TE::Transit);
+
+                    statesStack.push_back(nextStateEntry.value);
+                }
+
+                // Accept the string.
+                else if (entry.type == TE::Accept)
+                {
+                    // Pop state number.
+                    statesStack.pop_back();
+
+                    // Pop the parsed value.
+                    // clang-format off
         auto result = valuesStack.back(); valuesStack.pop_back();
-        // clang-format on
+                    // clang-format on
 
-        if (statesStack.size() != 1 || statesStack.back() != 0 ||
-            tokenizer.hasMoreTokens()) {
-          throwUnexpectedToken(token);
+                    if (statesStack.size() != 1 || statesStack.back() != 0 || tokenizer.hasMoreTokens()) {
+                        throwUnexpectedToken(token);
+                    }
+
+                    statesStack.pop_back();
+
+                    // clang-format off
+
+                    // clang-format on
+
+                    return result;
+                }
+            }
         }
 
-        statesStack.pop_back();
+      private:
+        /**
+         * Throws parser error on unexpected token.
+         */
+        [[noreturn]] void throwUnexpectedToken(SharedToken token) {
+            if (token->type == TokenType::__EOF && !tokenizer.hasMoreTokens()) {
+                std::string errMsg = "Unexpected end of input.\n";
+                std::cerr << errMsg;
+                throw std::runtime_error(errMsg.c_str());
+            }
+            tokenizer.throwUnexpectedToken(token->value, token->startLine, token->startColumn);
+        }
 
         // clang-format off
-        
-        // clang-format on
-
-        return result;
-      }
-    }
-  }
-
- private:
-  /**
-   * Throws parser error on unexpected token.
-   */
-  [[noreturn]] void throwUnexpectedToken(SharedToken token) {
-    if (token->type == TokenType::__EOF && !tokenizer.hasMoreTokens()) {
-      std::string errMsg = "Unexpected end of input.\n";
-      std::cerr << errMsg;
-      throw std::runtime_error(errMsg.c_str());
-    }
-    tokenizer.throwUnexpectedToken(token->value, token->startLine,
-                                   token->startColumn);
-  }
-
-  // clang-format off
   static constexpr size_t PRODUCTIONS_COUNT = 15;
   static std::array<Production, PRODUCTIONS_COUNT> productions_;
 
   static constexpr size_t ROWS_COUNT = 19;
   static std::array<Row, ROWS_COUNT> table_;
-  // clang-format on
-};
+        // clang-format on
+    };
 
-// ------------------------------------------------------------------
-// Productions.
+    // ------------------------------------------------------------------
+    // Productions.
 
-// clang-format off
+    // clang-format off
 void _handler1(yyparse& parser) {
 // Semantic action prologue.
 auto _1 = POP_V();
@@ -938,9 +944,10 @@ _1.list.push_back(_2); auto __ = _1 ;
 PUSH_VR();
 
 }
-// clang-format on
 
-// clang-format off
+    // clang-format on
+
+    // clang-format off
 std::array<Production, yyparse::PRODUCTIONS_COUNT> yyparse::productions_ = {{{-1, 1, &_handler1},
 {0, 1, &_handler2},
 {0, 1, &_handler3},
@@ -956,12 +963,12 @@ std::array<Production, yyparse::PRODUCTIONS_COUNT> yyparse::productions_ = {{{-1
 {2, 3, &_handler13},
 {3, 0, &_handler14},
 {3, 2, &_handler15}}};
-// clang-format on
+    // clang-format on
 
-// ------------------------------------------------------------------
-// Parsing table.
+    // ------------------------------------------------------------------
+    // Parsing table.
 
-// clang-format off
+    // clang-format off
 std::array<Row, yyparse::ROWS_COUNT> yyparse::table_ = {
     Row {{0, {TE::Transit, 1}}, {1, {TE::Transit, 2}}, {2, {TE::Transit, 3}}, {4, {TE::Shift, 4}}, {5, {TE::Shift, 5}}, {6, {TE::Shift, 6}}, {7, {TE::Shift, 7}}, {8, {TE::Shift, 8}}, {9, {TE::Shift, 9}}, {10, {TE::Shift, 10}}, {11, {TE::Shift, 11}}, {12, {TE::Shift, 12}}, {14, {TE::Shift, 13}}},
     Row {{16, {TE::Accept, 0}}},
@@ -983,8 +990,8 @@ std::array<Row, yyparse::ROWS_COUNT> yyparse::table_ = {
     Row {{0, {TE::Transit, 16}}, {1, {TE::Transit, 2}}, {2, {TE::Transit, 3}}, {4, {TE::Shift, 4}}, {5, {TE::Shift, 5}}, {6, {TE::Shift, 6}}, {7, {TE::Shift, 7}}, {8, {TE::Shift, 8}}, {9, {TE::Shift, 9}}, {10, {TE::Shift, 10}}, {11, {TE::Shift, 11}}, {12, {TE::Shift, 12}}, {14, {TE::Shift, 13}}, {15, {TE::Shift, 18}}},
     Row {{4, {TE::Reduce, 12}}, {5, {TE::Reduce, 12}}, {6, {TE::Reduce, 12}}, {7, {TE::Reduce, 12}}, {8, {TE::Reduce, 12}}, {9, {TE::Reduce, 12}}, {10, {TE::Reduce, 12}}, {11, {TE::Reduce, 12}}, {12, {TE::Reduce, 12}}, {13, {TE::Reduce, 12}}, {14, {TE::Reduce, 12}}, {15, {TE::Reduce, 12}}, {16, {TE::Reduce, 12}}}
 };
-// clang-format on
+    // clang-format on
 
-}  // namespace syntax
+}    // namespace syntax
 
 #endif
