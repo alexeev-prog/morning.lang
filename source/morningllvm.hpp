@@ -64,6 +64,8 @@ inline auto replace_regex_in_string(const std::string& str) -> std::string {
  * @return std::string
  **/
 inline auto extract_var_name(const Exp& exp) -> std::string {
+    LOG_TRACE
+
     return exp.type == ExpType::LIST ? exp.list[0].string : exp.string;
 }
 
@@ -75,20 +77,74 @@ inline auto extract_var_name(const Exp& exp) -> std::string {
  * @return false
  **/
 inline auto has_return_type(const Exp& fn_exp) -> bool {
+    LOG_TRACE
+
     return fn_exp.list[3].type == ExpType::SYMBOL && fn_exp.list[3].string == "->";
 }
 
+/**
+ * @brief Check tag in list
+ *
+ * @param exp expression
+ * @param tag tag
+ * @return true
+ * @return false
+ **/
 inline auto is_tagged_list(const Exp& exp, const std::string& tag) -> bool {
+    LOG_TRACE
+
     return exp.type == ExpType::LIST && exp.list[0].type == ExpType::SYMBOL && exp.list[0].string == tag;
 }
 
-inline auto is_variable(const Exp& exp) -> bool { return is_tagged_list(exp, "var"); }
-inline auto is_function(const Exp& exp) -> bool { return is_tagged_list(exp, "function"); }
-inline auto is_newobj(const Exp& exp) -> bool { return is_tagged_list(exp, "newobj"); }
+/**
+ * @brief Check is a variable declaration
+ *
+ * @param exp expression
+ * @return true
+ * @return false
+ **/
+inline auto is_variable(const Exp& exp) -> bool {
+    LOG_TRACE
 
-struct ClassInfo {
-    llvm::StructType* cls;
-    llvm::StructType* parent;
+    return is_tagged_list(exp, "var");
+}
+
+/**
+ * @brief Check is a function declaration
+ *
+ * @param exp expression
+ * @return true
+ * @return false
+ **/
+inline auto is_function(const Exp& exp) -> bool {
+    LOG_TRACE
+
+    return is_tagged_list(exp, "function");
+}
+
+/**
+ * @brief Check is a newobj declaration
+ *
+ * @param exp expression
+ * @return true
+ * @return false
+ **/
+inline auto is_newobj(const Exp& exp) -> bool {
+    LOG_TRACE
+
+    return is_tagged_list(exp, "newobj");
+}
+
+/**
+ * @brief Class Info struct
+ *
+ * This struct have a class object, parent class object, fields and methods
+ *
+ **/
+struct ClassInfo
+{
+    llvm::StructType* cls {};
+    llvm::StructType* parent {};
     std::map<std::string, llvm::Type*> fields_map;
     std::map<std::string, llvm::Function*> methods_map;
 };
@@ -292,6 +348,8 @@ class MorningLanguageLLVM {
      * @return llvm::Type*
      **/
     auto get_type(const std::string& type_string) -> llvm::Type* {
+        LOG_TRACE
+
         if (type_string == "!int" || type_string == "!int64") {
             return m_IR_BUILDER->getInt64Ty();
         }
@@ -335,6 +393,8 @@ class MorningLanguageLLVM {
      * @return llvm::Type* var type
      **/
     auto extract_var_type(const Exp& exp) -> llvm::Type* {
+        LOG_TRACE
+
         return exp.type == ExpType::LIST ? get_type(exp.list[1].string) : m_IR_BUILDER->getInt64Ty();
     }
 
@@ -345,6 +405,8 @@ class MorningLanguageLLVM {
      * @return llvm::FunctionType*
      **/
     auto extract_function_type(const Exp& fn_exp) -> llvm::FunctionType* {
+        LOG_TRACE
+
         auto params = fn_exp.list[2];
 
         auto* return_type =
@@ -355,9 +417,8 @@ class MorningLanguageLLVM {
         for (auto& param : params.list) {
             auto param_name = extract_var_name(param);
             auto* param_type = extract_var_type(param);
-            param_types.push_back(
-                param_name == "this" ? (llvm::Type*)m_CURRENT_CLASS->getPointerTo() : param_type
-            );
+            param_types.push_back(param_name == "this" ? (llvm::Type*)m_CURRENT_CLASS->getPointerTo()
+                                                       : param_type);
         }
 
         return llvm::FunctionType::get(return_type, param_types, /* varargs */ false);
@@ -392,6 +453,8 @@ class MorningLanguageLLVM {
      * @return llvm::Value*
      **/
     auto compile_function(const Exp& fn_exp, std::string fn_name, const env& env) -> llvm::Value* {
+        LOG_TRACE
+
         auto params = fn_exp.list[2];
         auto body = has_return_type(fn_exp) ? fn_exp.list[5] : fn_exp.list[3];
 
@@ -429,15 +492,21 @@ class MorningLanguageLLVM {
         return new_fn;
     }
 
-    void inherit_class(llvm::StructType* cls, llvm::StructType* parent) {
+    void inherit_class(llvm::StructType* /*cls*/, llvm::StructType* /*parent*/) {
+        LOG_TRACE
+
         // TODO: MAKE inheritance
     }
 
     auto get_class_by_name(const std::string& name) -> llvm::StructType* {
+        LOG_TRACE
+
         return llvm::StructType::getTypeByName(*m_CONTEXT, name);
     }
 
-    void build_class_info(llvm::StructType* cls, const Exp& cls_exp, env env) {
+    void build_class_info(llvm::StructType* cls, const Exp& cls_exp, const env& env) {
+        LOG_TRACE
+
         auto class_name = cls_exp.list[1].string;
         auto* class_info = &m_CLASS_MAP[class_name];
 
@@ -450,7 +519,7 @@ class MorningLanguageLLVM {
                 auto var_name_decl = exp.list[1];
 
                 auto field_name = extract_var_name(var_name_decl);
-                auto field_type = extract_var_type(var_name_decl);
+                auto* field_type = extract_var_type(var_name_decl);
 
                 class_info->fields_map[field_name] = field_type;
             } else if (is_function(exp)) {
@@ -458,7 +527,8 @@ class MorningLanguageLLVM {
 
                 auto fn_name = class_name + "_" + method_name;
 
-                class_info->methods_map[method_name] = create_function_prototype(fn_name, extract_function_type(exp), env);
+                class_info->methods_map[method_name] =
+                    create_function_prototype(fn_name, extract_function_type(exp), env);
             }
         }
 
@@ -466,11 +536,13 @@ class MorningLanguageLLVM {
     }
 
     void build_class_body(llvm::StructType* cls) {
-        std::string class_name(cls->getName().data());
+        LOG_TRACE
+
+        std::string const class_name(cls->getName().data());
 
         auto* class_info = &m_CLASS_MAP[class_name];
 
-        auto cls_fields = std::vector<llvm::Type*>{};
+        auto cls_fields = std::vector<llvm::Type*> {};
 
         for (const auto& field_info : class_info->fields_map) {
             cls_fields.push_back(field_info.second);
@@ -553,21 +625,15 @@ class MorningLanguageLLVM {
 
                     if (oper == "class") {
                         auto name = exp.list[1].string;
-                        auto* parent = exp.list[2].string == "self"
-                                                        ? nullptr
-                                                        : get_class_by_name(exp.list[2].string);
+                        auto* parent =
+                            exp.list[2].string == "self" ? nullptr : get_class_by_name(exp.list[2].string);
 
                         m_CURRENT_CLASS = llvm::StructType::create(*m_CONTEXT, name);
 
                         if (parent != nullptr) {
                             inherit_class(m_CURRENT_CLASS, parent);
                         } else {
-                            m_CLASS_MAP[name] = {
-                                m_CURRENT_CLASS,
-                                parent,
-                                {},
-                                {}
-                            };
+                            m_CLASS_MAP[name] = {m_CURRENT_CLASS, parent, {}, {}};
                         }
 
                         build_class_info(m_CURRENT_CLASS, exp, env);
@@ -708,9 +774,9 @@ class MorningLanguageLLVM {
                         args.push_back(generate_expression(exp.list[i], env));
                     }
 
-                    auto* fn = (llvm::Function*)callable;
+                    auto* function = (llvm::Function*)callable;
 
-                    return m_IR_BUILDER->CreateCall(fn, args);
+                    return m_IR_BUILDER->CreateCall(function, args);
                 }
 
                 return m_IR_BUILDER->getInt64(0);
@@ -734,8 +800,6 @@ class MorningLanguageLLVM {
         // int printf(const char* format, ...);
         m_MODULE->getOrInsertFunction("printf",
                                       llvm::FunctionType::get(m_IR_BUILDER->getInt64Ty(), byte_ptr_ty, true));
-
-
     }
 
     /**
