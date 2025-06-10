@@ -1,4 +1,5 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 commit ebbbf7bb969a3503e010eb3fe321bb7f243bece4
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Tue Jun 10 17:58:48 2025 +0700
@@ -11,6 +12,14 @@ Date:   Tue Jun 10 02:29:20 2025 +0700
 
     add basic object syntax
 =======
+=======
+commit 0952aa1e25305e5e7c499974ecf30cc468743afe
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Wed Jun 11 04:06:24 2025 +0700
+
+    add class info struct, add basic OOP syntax
+
+>>>>>>> OOP
 commit d14952df199310f2ba04bd71827e10f94b92e806
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Wed Jun 11 03:30:39 2025 +0700
