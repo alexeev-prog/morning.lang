@@ -561,7 +561,7 @@ class MorningLanguageLLVM {
                         return m_IR_BUILDER->CreateStore(init, var_binding);
                     }
 
-                    if (oper == "scope" or oper == "$>") {
+                    if (oper == "scope") {
                         llvm::Value* block_res = nullptr;
                         auto block_env =
                             std::make_shared<Environment>(std::map<std::string, llvm::Value*> {}, env);

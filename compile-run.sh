@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 bash build.sh all
-./build/morninglang
+./build/bin/morninglang
 lli ./out.ll
 
 echo $?

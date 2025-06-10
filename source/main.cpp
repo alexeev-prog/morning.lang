@@ -9,7 +9,7 @@ auto main() -> int {
 [func scoped_function (x) [scope
     [+ x 100]
     [while (> x 0)
-        [$>
+        [scope
             [set x (- x 1)]
             [fprint "%d " x]]]
     ]
