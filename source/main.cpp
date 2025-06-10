@@ -11,15 +11,13 @@ auto main() -> int {
 
         (func init (this width height)
             [scope
-                0
-                // (set (property this width) width)
-                // (set (property this height) height)
+                (set (property this width) width)
+                (set (property this height) height)
             ]
         )
 
         (func area (this)
-            0
-            // (+ (property this width) (property this height))
+            (+ (property this width) (property this height))
         )
     ]
 ]

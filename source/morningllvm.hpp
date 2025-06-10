@@ -430,7 +430,7 @@ class MorningLanguageLLVM {
     }
 
     void inherit_class(llvm::StructType* cls, llvm::StructType* parent) {
-        // TODO: MAKE
+        // TODO: MAKE inheritance
     }
 
     auto get_class_by_name(const std::string& name) -> llvm::StructType* {
