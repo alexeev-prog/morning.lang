@@ -1,3 +1,9 @@
+commit 559305fe2453fb4a88bb3ef51d8fa6b41536ed62
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Wed Jun 11 04:19:29 2025 +0700
+
+    revert changes; try to fix bgs
+
 commit cce1cb4c9fff33c87c1a43084a9ff67d773d9e21
 Merge: b1a01ce 8db6786
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
