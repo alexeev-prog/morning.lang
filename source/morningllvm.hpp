@@ -492,7 +492,7 @@ class MorningLanguageLLVM {
         return new_fn;
     }
 
-    void inherit_class(llvm::StructType* /*cls*/, llvm::StructType* /*parent*/) {
+    static void inherit_class(llvm::StructType* /*cls*/, llvm::StructType* /*parent*/) {
         LOG_TRACE
 
         // TODO: MAKE inheritance
@@ -538,9 +538,9 @@ class MorningLanguageLLVM {
     void build_class_body(llvm::StructType* cls) {
         LOG_TRACE
 
-        std::string const class_name(cls->getName().data());
+        std::string const CLASS_NAME(cls->getName().data());
 
-        auto* class_info = &m_CLASS_MAP[class_name];
+        auto* class_info = &m_CLASS_MAP[CLASS_NAME];
 
         auto cls_fields = std::vector<llvm::Type*> {};
 
