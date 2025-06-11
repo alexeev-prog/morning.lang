@@ -1,3 +1,9 @@
+commit 301665fac6db40c29e257cf31af8306c4e8ce099
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Wed Jun 11 22:47:15 2025 +0700
+
+    update scripts
+
 commit 016b6fbc4253b5120b607ffa48776b7db6962988
 Merge: 9dbeafc 01d7504
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
