@@ -1,14 +1,48 @@
+commit 016b6fbc4253b5120b607ffa48776b7db6962988
+Merge: 9dbeafc 01d7504
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Wed Jun 11 22:40:14 2025 +0700
+
+    Merge branch 'dev'
+
+commit 01d7504df73114949bf94c52a19b5df6d9863d29
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Wed Jun 11 22:40:08 2025 +0700
+
+    update scripts
+
+commit 9dbeafcaa559775e1eb76c543bdc916604c33c26
+Merge: a95b5d6 74fe803
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Wed Jun 11 22:34:49 2025 +0700
+
+    Merge branch 'dev'
+
 commit 74fe8039ae9632e00435c14d181ba8edbfba6696
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Wed Jun 11 22:34:43 2025 +0700
 
     update scripts and some changes
 
+commit a95b5d640a191a59d9b67a52d5962f462516c595
+Merge: 85b7738 9436548
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Wed Jun 11 04:32:03 2025 +0700
+
+    Merge branch 'dev'
+
 commit 94365480e00157827bd7f44b50c63c1558a1c001
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Wed Jun 11 04:31:53 2025 +0700
 
     fix codestyle
+
+commit 85b77383404134da92a5c5c446c8ab5b9f6f3dba
+Merge: b328676 0785d70
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Wed Jun 11 04:21:42 2025 +0700
+
+    Merge branch 'dev'
 
 commit 0785d70903c451d4417de7170266032063ab75cf
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
@@ -91,11 +125,37 @@ Date:   Mon Jun 9 02:21:51 2025 +0700
 
     fixes
 
+commit b3286765fa398d88c9cea5883be8ccd63007eb84
+Merge: 2d8f34e 3107832
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Mon Jun 9 00:05:29 2025 +0700
+
+    Merge branch 'dev'
+
 commit 3107832d4306701fa819dd1fb33f0c0aa695f369
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Mon Jun 9 00:05:17 2025 +0700
 
     improve build system, readme, improve syntax
+
+commit 2d8f34e6650a546166299a2dc32d808496449ab7
+Merge: 573112f c1a7f27
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Sun Jun 8 14:48:35 2025 +0700
+
+    Merge branch 'dev'
+
+commit 573112f6a729f3757d0b43724bbcc6120c838d14
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Sun Jun 8 14:47:26 2025 +0700
+
+    small changes in number systems and docs
+
+commit 63562d2bbd21e45d29df2f8f6fe102dcfb632760
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Sun Jun 8 14:38:42 2025 +0700
+
+    add support for hex, binary, octal numbers and small improve syntax
 
 commit c1a7f270646e5c1a39d96d30241ce14cffbc2dc3
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
@@ -108,6 +168,15 @@ Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Sun Jun 8 14:38:42 2025 +0700
 
     add support for hex, binary, octal numbers and small improve syntax
+
+commit e8b3a076c42d9c10fe88283747db900b5233c10b
+Merge: 85eed56 23ed0bc
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Fri Jun 6 09:21:17 2025 +0700
+
+    Merge pull request #1 from alexeev-prog/dev
+    
+    small changes
 
 commit 23ed0bc7969e2a192244bd20fffaeff0648f00ca
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
