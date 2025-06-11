@@ -623,6 +623,7 @@ class MorningLanguageLLVM {
                         GEN_BINARY_OP(CreateICmpULE, "__tmpcmp__");
                     }
 
+                    // Class definition
                     if (oper == "class") {
                         auto name = exp.list[1].string;
                         auto* parent =
@@ -645,6 +646,7 @@ class MorningLanguageLLVM {
                         return m_IR_BUILDER->getInt64(0);
                     }
 
+                    // Function definition
                     if (oper == "func") {
                         return compile_function(exp, /* name */ exp.list[1].string, env);
                     }
@@ -712,6 +714,7 @@ class MorningLanguageLLVM {
                         return phi;
                     }
 
+                    // Set variable value
                     if (oper == "set") {
                         auto* value = generate_expression(exp.list[2], env);
                         auto var_name = exp.list[1].string;
@@ -723,6 +726,7 @@ class MorningLanguageLLVM {
                         return value;
                     }
 
+                    // Define variable
                     if (oper == "var") {
                         if (m_CURRENT_CLASS != nullptr) {
                             return m_IR_BUILDER->getInt64(0);
@@ -740,6 +744,7 @@ class MorningLanguageLLVM {
                         return m_IR_BUILDER->CreateStore(init, var_binding);
                     }
 
+                    // Define scope block
                     if (oper == "scope") {
                         llvm::Value* block_res = nullptr;
                         auto block_env =
@@ -753,6 +758,7 @@ class MorningLanguageLLVM {
                         return block_res;
                     }
 
+                    // Define
                     if (oper == "fprint") {
                         auto* printf_function = m_MODULE->getFunction("printf");
                         std::vector<llvm::Value*> args {};
@@ -765,7 +771,6 @@ class MorningLanguageLLVM {
                     }
 
                     // Function calls
-
                     auto* callable = generate_expression(exp.list[0], env);
 
                     std::vector<llvm::Value*> args {};
