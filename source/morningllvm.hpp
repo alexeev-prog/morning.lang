@@ -141,8 +141,7 @@ inline auto is_newobj(const Exp& exp) -> bool {
  * This struct have a class object, parent class object, fields and methods
  *
  **/
-struct ClassInfo
-{
+struct ClassInfo {
     llvm::StructType* cls {};
     llvm::StructType* parent {};
     std::map<std::string, llvm::Type*> fields_map;
