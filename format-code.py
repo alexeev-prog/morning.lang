@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Python program to format C/C++ files using clang-format 
+# Python program to format C/C++ files using clang-format
 import os
 import sys
 from pathlib import Path
@@ -12,9 +12,10 @@ YELLOW = '\033[33m'
 NC = '\033[0m'  # No Color
 BOLD = '\033[1m'  # No Color
 
-# File Extension filter. You can add new extension 
-cpp_extensions = (".cxx",".cpp",".c", ".hxx", ".hh", ".cc", ".hpp", ".h") 
+# File Extension filter. You can add new extension
+cpp_extensions = (".cxx",".cpp",".c", ".hxx", ".hh", ".cc", ".hpp", ".h")
 IGNORED_DIRS = ['build', '.git', 'cmake', 'docs', 'utils', 'CMakeFiles']
+IGNORED_FILES = ['slogger.hpp']
 
 CLANG_FORMAT = 'clang-format'
 SPACETABS = './space2tabs.sh'
@@ -77,22 +78,22 @@ def convert_file(file_path, tab_size, conversion_type):
 	tab_size = validate_positive_integer(tab_size)
 	if tab_size is None:
 		return
-	
+
 	if not file_exists(file_path):
 		return
-	
+
 
 def main():
-	# Set the current working directory for scanning c/c++ sources (including 
-	# header files) and apply the clang formatting 
-	# Please note "-style" is for standard style options 
-	# and "-i" is in-place editing 
-	
+	# Set the current working directory for scanning c/c++ sources (including
+	# header files) and apply the clang formatting
+	# Please note "-style" is for standard style options
+	# and "-i" is in-place editing
+
 	for root, dirs, files in os.walk(os.getcwd()):
 		if len(set(root.split('/')).intersection(IGNORED_DIRS)) > 0:
 			continue
-		for file in files: 
-			if file.endswith(cpp_extensions):
+		for file in files:
+			if file.endswith(cpp_extensions) and file not in IGNORED_FILES:
 				print(f"{BOLD}Format {file}: {root}/{file}{NC}")
 				os.system(f'clang-tidy --fix {root}/{file}')
 				os.system(f"{CLANG_FORMAT} -i -style=file {root}/{file}")

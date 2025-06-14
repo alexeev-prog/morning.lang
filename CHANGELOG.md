@@ -1,3 +1,9 @@
+commit cf1b59ea161d2edc7af5c97aac6b512481b6cf11
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Sun Jun 15 03:55:58 2025 +0700
+
+    fix codestyle, fix docs
+
 commit fdcb774ae317676d2aef60ab3684a2ee4f5c6d56
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Fri Jun 13 03:48:32 2025 +0700

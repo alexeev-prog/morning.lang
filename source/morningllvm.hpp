@@ -1,35 +1,39 @@
 #pragma once
 
 // LLVM Core Headers (Essential Components)
-#include <llvm/IR/BasicBlock.h>    // Code blocks without branches
+#include <llvm/IR/BasicBlock.h>                     // Code blocks without branches
 #include <llvm/IR/DerivedTypes.h>
-#include <llvm/IR/Function.h>    // Function representation
+#include <llvm/IR/Function.h>                       // Function representation
 #include <llvm/IR/GlobalVariable.h>
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/Value.h>
-#include <llvm/IR/Verifier.h>    // IR validity checks
+#include <llvm/IR/Verifier.h>                       // IR validity checks
 #include <llvm/Support/Alignment.h>
 #include <llvm/Support/Casting.h>
-#include <llvm/Support/raw_ostream.h>    // Output handling
+#include <llvm/Support/raw_ostream.h>               // Output handling
 
 #include "env.h"
 #include "llvm/IR/Constants.h"
-#include "llvm/IR/IRBuilder.h"    // Intermediate Representation (IR) construction
-#include "llvm/IR/LLVMContext.h"    // Compilation environment isolation
-#include "llvm/IR/Module.h"    // Code container (like a source file)
-#include "parser/MorningLangGrammar.h"    // Grammatic Parser
+#include "llvm/IR/IRBuilder.h"                      // Intermediate Representation (IR) construction
+#include "llvm/IR/LLVMContext.h"                    // Compilation environment isolation
+#include "llvm/IR/Module.h"                         // Code container (like a source file)
+#include "parser/MorningLangGrammar.h"              // Grammatic Parser
 #include "tracelogger.hpp"
 
 // Standard libraries
 #include <cstdint>
 #include <map>
-#include <memory>    // Smart pointers
-#include <regex>    // Use regex expressions
-#include <string>    // String handling
-#include <system_error>    // Use system errors (providers error code)
+#include <memory>                                   // Smart pointers
+#include <regex>                                    // Use regex expressions
+#include <string>                                   // String handling
+#include <system_error>                             // Use system errors (providers error code)
 #include <utility>
-#include <vector>    // Use vectors
+#include <vector>                                   // Use vectors
 
+/**
+ * @brief Macros for generating binary operation
+ *
+ **/
 #define GEN_BINARY_OP(Op, varName) \
     do { \
         auto oper1 = generate_expression(exp.list[1], env); \
@@ -333,14 +337,14 @@ class MorningLanguageLLVM {
     /**
      * @brief Get the type by name
      *
-     * !int/!int64 - 64bit integer
-     * !int32 - 32bit integer
-     * !int16 - 16bit integer
-     * !int8 - 8bit integer
-     * !str - string
-     * !frac - fractional (double) number
-     * !bool - basic integer
-     * !none - void, none
+     * `!int/!int64` - 64bit integer
+     * `!int32` - 32bit integer
+     * `!int16` - 16bit integer
+     * `!int8` - 8bit integer
+     * `!str` - string
+     * `!frac` - fractional (double) number
+     * `!bool` - basic integer
+     * `!none` - void, none
      * Otherwise: 64bit integer
      *
      * @param type_string
@@ -491,18 +495,40 @@ class MorningLanguageLLVM {
         return new_fn;
     }
 
-    static void InheritClass(llvm::StructType* /*cls*/, llvm::StructType* /*parent*/) {
+    /**
+     * @brief Inherit class
+     * @todo Make class inheritance
+     * @deprecated Its not done
+     *
+     * @param llvm::StructType* child class struct
+     * @param llvm::StructType* parent class struct
+     *
+     **/
+    void inherit_class(llvm::StructType* /*cls*/, llvm::StructType* /*parent*/) {
         LOG_TRACE
 
         // TODO: MAKE inheritance
     }
 
+    /**
+     * @brief Get the class by name object
+     *
+     * @param name
+     * @return llvm::StructType*
+     **/
     auto get_class_by_name(const std::string& name) -> llvm::StructType* {
         LOG_TRACE
 
         return llvm::StructType::getTypeByName(*m_CONTEXT, name);
     }
 
+    /**
+     * @brief Build class info
+     *
+     * @param cls class struct
+     * @param cls_exp class expression
+     * @param env environment
+     **/
     void build_class_info(llvm::StructType* cls, const Exp& cls_exp, const env& env) {
         LOG_TRACE
 
@@ -534,6 +560,11 @@ class MorningLanguageLLVM {
         build_class_body(cls);
     }
 
+    /**
+     * @brief Build class body
+     *
+     * @param cls class struct
+     **/
     void build_class_body(llvm::StructType* cls) {
         LOG_TRACE
 
@@ -554,6 +585,11 @@ class MorningLanguageLLVM {
 
     /**
      * @brief Generates value from expression (currently simple number)
+     * @todo Rewrite this method (split) in future versions
+     *
+     * @param exp expression
+     * @param env environment
+     *
      * @return LLVM value representing computed result
      *
      * LLVM uses SSA (Static Single Assignment):
@@ -631,7 +667,7 @@ class MorningLanguageLLVM {
                         m_CURRENT_CLASS = llvm::StructType::create(*m_CONTEXT, name);
 
                         if (parent != nullptr) {
-                            InheritClass(m_CURRENT_CLASS, parent);
+                            inherit_class(m_CURRENT_CLASS, parent);
                         } else {
                             m_CLASS_MAP[name] = {m_CURRENT_CLASS, parent, {}, {}};
                         }
