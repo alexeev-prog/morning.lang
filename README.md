@@ -37,6 +37,8 @@
 
 At the core of the MorningLang compiler lies a meticulously crafted hierarchy of LLVM components that orchestrate the translation from high-level language constructs to optimized machine code. The system's architecture revolves around three fundamental pillars that form the backbone of its code generation capabilities.
 
+You can read [SHORT GUILDELINES](./SHORT_GUILDELINES.md)
+
  > [!CAUTION]
  > At the moment, morning.lang is under active development, many things may not work, and this version is not recommended for use (all at your own risk)
 
@@ -215,3 +217,23 @@ Online docs available on [this link](https://alexeev-prog.github.io/morning.lang
 - **Contact Email** — for direct feedback, suggestions, and collaboration inquiries. (email: `alexeev.dev@mail.ru`. Please insert "Morning.lang Issue" at the beginning of the subject line.)
 
 Thank you for exploring **Morning.lang** — let’s create extraordinary 3D experiences together! 🚀
+
+## License
+
+```
+Aesthetic programming language in C++ (llvm)
+Copyright (C) 2025  Alexeev Bronislav
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+```

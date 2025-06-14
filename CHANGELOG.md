@@ -1,3 +1,9 @@
+commit 5d6dbd8850a156f7995ba5a6070a876c4347d692
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Sun Jun 15 04:24:06 2025 +0700
+
+    add simple state logger (slogger), fix docstrings
+
 commit cf1b59ea161d2edc7af5c97aac6b512481b6cf11
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Sun Jun 15 03:55:58 2025 +0700
