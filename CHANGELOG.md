@@ -1,3 +1,9 @@
+commit fdcb774ae317676d2aef60ab3684a2ee4f5c6d56
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Fri Jun 13 03:48:32 2025 +0700
+
+    fix shell, improve formatting, fix codestyle, add docs
+
 commit efc24f03764df10a07a826621883e105f5579dec
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Thu Jun 12 03:27:11 2025 +0700

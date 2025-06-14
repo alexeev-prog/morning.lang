@@ -491,7 +491,7 @@ class MorningLanguageLLVM {
         return new_fn;
     }
 
-    static void inherit_class(llvm::StructType* /*cls*/, llvm::StructType* /*parent*/) {
+    static void InheritClass(llvm::StructType* /*cls*/, llvm::StructType* /*parent*/) {
         LOG_TRACE
 
         // TODO: MAKE inheritance
@@ -631,7 +631,7 @@ class MorningLanguageLLVM {
                         m_CURRENT_CLASS = llvm::StructType::create(*m_CONTEXT, name);
 
                         if (parent != nullptr) {
-                            inherit_class(m_CURRENT_CLASS, parent);
+                            InheritClass(m_CURRENT_CLASS, parent);
                         } else {
                             m_CLASS_MAP[name] = {m_CURRENT_CLASS, parent, {}, {}};
                         }

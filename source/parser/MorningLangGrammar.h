@@ -191,8 +191,7 @@ enum class TokenType {
     // ------------------------------------------------------------------
     // Token.
 
-    struct Token
-    {
+    struct Token {
         TokenType type;
         std::string value;
 
@@ -211,8 +210,7 @@ enum class TokenType {
     // ------------------------------------------------------------------
     // Lex rule: [regex, handler]
 
-    struct LexRule
-    {
+    struct LexRule {
         std::regex regex;
         LexRuleHandler handler;
     };
@@ -601,8 +599,7 @@ std::map<TokenizerState, std::vector<size_t>> Tokenizer::lexRulesByStartConditio
     /**
      * Parsing table entry.
      */
-    struct TableEntry
-    {
+    struct TableEntry {
         TE type;
         int value;
     };
@@ -621,8 +618,7 @@ class MorningLangGrammar;
      * opcode - encoded index
      * rhsLength - length of the RHS to pop.
      */
-    struct Production
-    {
+    struct Production {
         int opcode;
         int rhsLength;
         ProductionHandler handler;
