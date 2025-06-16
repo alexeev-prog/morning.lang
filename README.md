@@ -41,9 +41,9 @@
 
 ---
 
-## 🚀 Why Morning.lang Stands Out
+Read our [SHORT GUIDELINES](./SHORT_GUIDELINES.md)
 
-### Powering Performance with Modern Tech
+## Powering Performance with Modern Tech
 Morning.lang combines the raw power of C++ with the cutting-edge optimization capabilities of **LLVM 19** to deliver exceptional performance:
 
 - ⚡️ **LLVM19 Backend**: Leverages the latest optimizations from the LLVM project
@@ -52,7 +52,7 @@ Morning.lang combines the raw power of C++ with the cutting-edge optimization ca
 - 🧠 **Smart Memory Management**: Automatic scope-based resource handling
 - 🌉 **Seamless Interop**: Easily integrate with existing C/C++ libraries
 
-### Why Developers Love Morning.lang
+## Why Developers Love Morning.lang
 ```mermaid
 graph LR
 A[Clean Syntax] --> B[Developer Productivity]
