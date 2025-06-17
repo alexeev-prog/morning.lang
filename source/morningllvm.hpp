@@ -344,7 +344,7 @@ class MorningLanguageLLVM {
      * `!str` - string
      * `!frac` - fractional (double) number
      * `!bool` - basic integer
-     * `!none` - void, none
+     * `!void` - void, none
      * Otherwise: 64bit integer
      *
      * @param type_string
@@ -381,7 +381,7 @@ class MorningLanguageLLVM {
             return m_IR_BUILDER->getInt64Ty();
         }
 
-        if (type_string == "!none") {
+        if (type_string == "!void") {
             return m_IR_BUILDER->getVoidTy();
         }
 
