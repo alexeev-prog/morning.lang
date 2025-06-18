@@ -11,21 +11,19 @@ auto main() -> int {
 
         (func init (this width height)
             [scope
-                0
-                // (set (property this width) width)
-                // (set (property this height) height)
+                (set (property this width) width)
+                (set (property this height) height)
             ]
         )
 
         (func area (this)
-            0
-            // (+ (property this width) (property this height))
+            (+ (property this width) (property this height))
         )
     ]
 ]
 
-// (var square (newobj Figure 10 10))
-// (fprint "Square %d X %d" (property square width) (property square height))
+(var square (newobj Figure 10 10))
+(fprint "Square %d X %d" (property square width) (property square height))
     )";
 
     MorningLanguageLLVM morning_vm;

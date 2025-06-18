@@ -12,12 +12,14 @@
 #include <llvm/Support/Casting.h>
 #include <llvm/Support/raw_ostream.h>               // Output handling
 
-#include "env.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/IRBuilder.h"                      // Intermediate Representation (IR) construction
 #include "llvm/IR/LLVMContext.h"                    // Compilation environment isolation
 #include "llvm/IR/Module.h"                         // Code container (like a source file)
+
+#include "env.h"
 #include "parser/MorningLangGrammar.h"              // Grammatic Parser
+#include "slogger.hpp"
 #include "tracelogger.hpp"
 
 // Standard libraries
@@ -584,6 +586,22 @@ class MorningLanguageLLVM {
     }
 
     /**
+     * @brief Create a class instance object
+     *
+     * @param exp experssion
+     * @param env environment
+     * @return llvm::Value*
+     **/
+    auto create_instance(const Exp& exp, env env) -> llvm::Value* {
+        auto class_name = exp.list[1].string;
+        auto* cls = get_class_by_name(class_name);
+
+        if (cls == nullptr) {
+            log_error("Unknown class: %s", class_name.c_str());
+        }
+    }
+
+    /**
      * @brief Generates value from expression (currently simple number)
      * @todo Rewrite this method (split) in future versions
      *
@@ -656,6 +674,10 @@ class MorningLanguageLLVM {
                         GEN_BINARY_OP(CreateICmpUGE, "__tmpcmp__");
                     } else if (oper == "<=" || oper == "__CMPLE__") {
                         GEN_BINARY_OP(CreateICmpULE, "__tmpcmp__");
+                    }
+
+                    if (oper == "newobj") {
+
                     }
 
                     // Class definition
