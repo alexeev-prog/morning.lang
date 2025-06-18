@@ -17,6 +17,6 @@ enum
 #define PURPLE_COLOR "\033[1;35m"
 #define CYAN_COLOR "\033[1;36m"
 #define GREY_COLOR "\033[0;37m"
-#define RESET "\033[0m"
+#define RESET_STYLE "\033[0m"
 #define BOLD "\033[1m"
 #define UNDERLINE "\033[4m"

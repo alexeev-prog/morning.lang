@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import sys
 import os
 
 
@@ -17,5 +18,7 @@ echo $?""")
 
 build()
 run_morninglang()
-clang_compile()
-run()
+
+if len(sys.argv) > 1 and sys.argv[1] == "build":
+    clang_compile()
+    run()

@@ -52,8 +52,6 @@ using env = std::shared_ptr<Environment>;
  * @return std::string
  **/
 inline auto replace_regex_in_string(const std::string& str) -> std::string {
-    LOG_TRACE
-
     auto regex_newline = std::regex("\\\\n");
     auto regex_tab = std::regex("\\\\t");
 
@@ -70,8 +68,6 @@ inline auto replace_regex_in_string(const std::string& str) -> std::string {
  * @return std::string
  **/
 inline auto extract_var_name(const Exp& exp) -> std::string {
-    LOG_TRACE
-
     return exp.type == ExpType::LIST ? exp.list[0].string : exp.string;
 }
 
@@ -83,8 +79,6 @@ inline auto extract_var_name(const Exp& exp) -> std::string {
  * @return false
  **/
 inline auto has_return_type(const Exp& fn_exp) -> bool {
-    LOG_TRACE
-
     return fn_exp.list[3].type == ExpType::SYMBOL && fn_exp.list[3].string == "->";
 }
 
@@ -97,8 +91,6 @@ inline auto has_return_type(const Exp& fn_exp) -> bool {
  * @return false
  **/
 inline auto is_tagged_list(const Exp& exp, const std::string& tag) -> bool {
-    LOG_TRACE
-
     return exp.type == ExpType::LIST && exp.list[0].type == ExpType::SYMBOL && exp.list[0].string == tag;
 }
 
@@ -110,8 +102,6 @@ inline auto is_tagged_list(const Exp& exp, const std::string& tag) -> bool {
  * @return false
  **/
 inline auto is_variable(const Exp& exp) -> bool {
-    LOG_TRACE
-
     return is_tagged_list(exp, "var");
 }
 
@@ -123,8 +113,6 @@ inline auto is_variable(const Exp& exp) -> bool {
  * @return false
  **/
 inline auto is_function(const Exp& exp) -> bool {
-    LOG_TRACE
-
     return is_tagged_list(exp, "function");
 }
 
@@ -179,6 +167,7 @@ class MorningLanguageLLVM {
         initialize_module();
         setup_extern_functions();
         setup_global_environment();
+        setup_target_triple();
     }
 
     /**
@@ -264,6 +253,10 @@ class MorningLanguageLLVM {
     llvm::StructType* m_CURRENT_CLASS = nullptr;
 
     std::map<std::string, ClassInfo> m_CLASS_MAP;
+
+    void setup_target_triple() {
+        m_MODULE->setTargetTriple("x86_64-unknown-linux-gnu");
+    }
 
     /**
      * @brief Set the up global environment
@@ -586,19 +579,62 @@ class MorningLanguageLLVM {
     }
 
     /**
+     * @brief Get the type size object
+     *
+     * @param input_type input llvm type
+     * @return size_t
+     **/
+    auto get_type_size(llvm::Type* input_type) -> size_t {
+        return m_MODULE->getDataLayout().getTypeAllocSize(input_type);
+    }
+
+    /**
+     * @brief Allocate class instance
+     *
+     * @param cls class
+     * @param name class name
+     * @return llvm::Value*
+     **/
+    auto malloc_instance(llvm::StructType* cls, const std::string& name) -> llvm::Value* {
+        auto* type_size = m_IR_BUILDER->getInt64(get_type_size(cls));
+
+        auto* malloc_ptr = m_IR_BUILDER->CreateCall(m_MODULE->getFunction("GC_malloc"), type_size, name);
+
+        return m_IR_BUILDER->CreatePointerCast(malloc_ptr, cls->getPointerTo());
+    }
+
+    /**
      * @brief Create a class instance object
      *
      * @param exp experssion
      * @param env environment
      * @return llvm::Value*
      **/
-    auto create_instance(const Exp& exp, env env) -> llvm::Value* {
+    auto create_instance(const Exp& exp, env env, const std::string& name) -> llvm::Value* {
         auto class_name = exp.list[1].string;
         auto* cls = get_class_by_name(class_name);
 
         if (cls == nullptr) {
             log_error("Unknown class: %s", class_name.c_str());
         }
+
+        // NOTE: Stack allocation (TODO: heapp allocation)
+        // auto* instance = name.empty() ? m_IR_BUILDER->CreateAlloca(cls)
+        //                               : m_IR_BUILDER->CreateAlloca(cls, nullptr, name);
+
+        auto* instance = malloc_instance(cls, name);
+
+        auto* class_initializer = m_MODULE->getFunction(class_name + "_init");
+
+        std::vector<llvm::Value*> args{instance};
+
+        for (auto i = 2; i < exp.list.size(); i++) {
+            args.push_back(generate_expression(exp.list[i], env));
+        }
+
+        m_IR_BUILDER->CreateCall(class_initializer, args);
+
+        return instance;
     }
 
     /**
@@ -792,6 +828,11 @@ class MorningLanguageLLVM {
                         auto var_name_declaration = exp.list[1];
                         auto var_name = extract_var_name(var_name_declaration);
 
+                        if (is_newobj(exp.list[2])) {
+                            auto instance = create_instance(exp.list[2], env, var_name);
+                            return env->define(var_name, instance);
+                        }
+
                         auto* init = generate_expression(exp.list[2], env);
 
                         auto* var_type = extract_var_type(var_name_declaration);
@@ -862,6 +903,8 @@ class MorningLanguageLLVM {
         // int printf(const char* format, ...);
         m_MODULE->getOrInsertFunction("printf",
                                       llvm::FunctionType::get(m_IR_BUILDER->getInt64Ty(), byte_ptr_ty, true));
+
+        m_MODULE->getOrInsertFunction("GC_malloc", llvm::FunctionType::get(byte_ptr_ty, m_IR_BUILDER->getInt64Ty(), false));
     }
 
     /**

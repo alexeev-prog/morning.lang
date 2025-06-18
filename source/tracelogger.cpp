@@ -11,7 +11,7 @@ TraceLogger::TraceLogger(const char* filename, const char* funcname, int linenum
     : m_FILENAME(filename)
     , m_FUNCNAME(funcname) {
     std::cout << GREY_COLOR << "::Trace::  " << Indent << "Entering " << m_FUNCNAME << "() - (" << m_FILENAME
-              << ":" << linenumber << ")" << RESET << '\n';
+              << ":" << linenumber << ")" << RESET_STYLE << '\n';
     if (Indent.empty()) {
         Indent.append(START_INDENT_SYMBOL);
     } else {
@@ -22,5 +22,5 @@ TraceLogger::TraceLogger(const char* filename, const char* funcname, int linenum
 TraceLogger::~TraceLogger() {
     Indent.resize(Indent.length() - INDENT_LENGTH);
     std::cout << GREY_COLOR << "::Trace::  " << Indent << "Leaving " << m_FUNCNAME << "() - (" << m_FILENAME
-              << ")" << RESET << '\n';
+              << ")" << RESET_STYLE << '\n';
 }

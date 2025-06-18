@@ -1,3 +1,9 @@
+commit c2593cc8c638c0ae82e54b8f5642b3a95a119b00
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Thu Jun 19 04:51:35 2025 +0700
+
+    fix docs & improve code style
+
 commit 5dd3ec98bf394e63fd4cad9a9d386843ae1d6700
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Wed Jun 18 06:18:10 2025 +0700
