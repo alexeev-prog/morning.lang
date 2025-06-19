@@ -101,6 +101,7 @@ class MorningLanguageLLVM {
         LOG_TRACE
 
         initialize_module();
+        setup_triple();
         setup_extern_functions();
         setup_global_environment();
     }
@@ -114,17 +115,14 @@ class MorningLanguageLLVM {
      * 2. Print IR to console for debugging
      * 3. Save IR to file for later use
      */
-    auto execute(const std::string& program) -> int {
+    auto execute(const std::string& program, const std::string& output_base) -> int {
         LOG_TRACE
 
         auto ast = m_PARSER->parse("[scope " + program + "]");
-
         generate_ir(ast);
 
         llvm::verifyModule(*m_MODULE, &llvm::errs());
-        m_MODULE->print(llvm::outs(), nullptr);    // Like cout for LLVM
-
-        save_module_to_file("./out.ll");
+        save_module_to_file(output_base + ".ll");    // Изменено имя файла
 
         return 0;
     }
@@ -185,6 +183,8 @@ class MorningLanguageLLVM {
      **/
     std::unique_ptr<llvm::IRBuilder<>> m_VARS_BUILDER;
 
+    void setup_triple() { m_MODULE->setTargetTriple("x86_64-unknown-linux-gnu"); }
+
     /**
      * @brief Set the up global environment
      **/
@@ -192,7 +192,7 @@ class MorningLanguageLLVM {
         LOG_TRACE
 
         std::map<std::string, llvm::Value*> const GLOBAL_OBJECT {
-            {"_VERSION", m_IR_BUILDER->getInt64(101)},
+            {"_VERSION", m_IR_BUILDER->getInt64(200)},
         };
 
         std::map<std::string, llvm::Value*> global_rec {};
@@ -223,8 +223,6 @@ class MorningLanguageLLVM {
             );
 
         m_ACTIVE_FUNCTION = create_function("main", main_type, m_GLOBAL_ENV);
-
-        create_global_variable("_MORNING_VERSION", m_IR_BUILDER->getInt64(1));
 
         generate_expression(ast, m_GLOBAL_ENV);
 
@@ -259,14 +257,14 @@ class MorningLanguageLLVM {
     /**
      * @brief Get the type by name
      *
-     * !int/!int64 - 64bit integer
-     * !int32 - 32bit integer
-     * !int16 - 16bit integer
-     * !int8 - 8bit integer
-     * !str - string
-     * !frac - fractional (double) number
-     * !bool - basic integer
-     * !none - void, none
+     * `!int`; `!int64` - 64bit integer
+     * `!int32` - 32bit integer
+     * `!int16` - 16bit integer
+     * `!int8` - 8bit integer
+     * `!str` - string
+     * `!frac` - fractional (double) number
+     * `!bool` - basic integer
+     * `!none` - void, none
      * Otherwise: 64bit integer
      *
      * @param type_string

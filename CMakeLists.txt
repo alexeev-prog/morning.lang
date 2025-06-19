@@ -35,6 +35,17 @@ add_library(
     source/parser/MorningLangGrammar.h
 )
 target_link_libraries(morninglang_lib ${llvm_libs} gc)
+target_link_libraries(morninglang_lib
+    LLVMPasses
+    LLVMX86CodeGen
+    LLVMX86Desc
+    LLVMX86Info
+    LLVMOrcJIT
+    LLVMExecutionEngine
+    LLVMRuntimeDyld
+    LLVMMCJIT
+    LLVMTarget
+)
 
 target_include_directories(
     morninglang_lib ${warning_guard}

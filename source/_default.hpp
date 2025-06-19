@@ -1,6 +1,6 @@
 #pragma once
 
-#define DEBUG
+// #define DEBUG
 
 #define START_INDENT_SYMBOL "├─"
 #define INDENT_SYMBOL "──"

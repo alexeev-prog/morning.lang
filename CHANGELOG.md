@@ -1,3 +1,9 @@
+commit ea9d6cf3123bbdf83125bba252c9cbbb654fec11
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Thu Jun 19 19:44:55 2025 +0700
+
+    remove OOP paradigm, change paradigm
+
 commit 92ec5d81ae4d4433cea7afc1b1c91410383279f2
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Thu Jun 19 05:20:11 2025 +0700
