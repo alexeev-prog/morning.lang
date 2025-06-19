@@ -1,3 +1,9 @@
+commit 92ec5d81ae4d4433cea7afc1b1c91410383279f2
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Thu Jun 19 05:20:11 2025 +0700
+
+    fix compile error and add GC_malloc
+
 commit c2593cc8c638c0ae82e54b8f5642b3a95a119b00
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Thu Jun 19 04:51:35 2025 +0700

@@ -127,29 +127,6 @@ F --> G
 > **License**
 > Morning.lang is licensed under [GNU GPL V3](./LICENSE) - Free to use, modify, and distribute
 
----
-
-## 💡 Why Choose Morning.lang for Your Next Project?
-
-### 1. Uncompromising Performance
-Built on **LLVM 19**, Morning.lang delivers:
-- Advanced optimization pipelines
-- Architecture-specific code generation
-- LTO (Link Time Optimization) support
-- Auto-vectorization for SIMD operations
-
-### 2. Modern Language Features
-- Pattern matching
-- Algebraic data types
-- First-class functions
-- Hygienic macros
-- Custom operator definitions
-
-### 3. Safety Without Sacrifice
-- Ownership system prevents memory leaks
-- Bounds checking (optional)
-- Null safety by design
-- Immutable-by-default variables
 <!--
 ### 4. Seamless C/C++ Integration
 
@@ -165,7 +142,8 @@ Built on **LLVM 19**, Morning.lang delivers:
 
 ## 💡 Language Highlights
 
-### 🔄 Example
+### 🧩 Example
+
 ```morning
 [var [ALPHA !int] 42]
 
@@ -191,8 +169,49 @@ Built on **LLVM 19**, Morning.lang delivers:
 [func sum ((first !int) (second !int)) <-> !int (+ first second)]
 
 [fprint "sum 100 1: %d\n\n" (sum 100 1)]
-
 ```
+
+## 🧩 Number systems
+```morning
+[func square (x) (* x x)]
+
+[fprint "square 10: %d\n" (square 10)]
+[fprint "square 0xA: %d\n" (square 0xA)]
+[fprint "square 012: %d\n" (square 012)]
+[fprint "square 0b1010: %d\n" (square 0b1010)]
+
+[func sum ((first !int) (second !int)) -> !int (+ first second)]
+
+[fprint "sum 100 1: %d\n\n" (sum 100 1)]
+```
+
+## 🧩 While Loop
+```morning
+[var a 10]
+
+[while (> a 0)
+    [scope
+        [set a (- a 1)]
+        [fprint "%d " a]]]
+
+[fprint "\nA: %d\n\n" a]
+```
+
+## 🧩 Check (if-then-else) conditions
+```morning
+[var b 100]
+
+[var a (+ b 1)]
+
+[check (== a 101)
+    [check (> a 100)
+        [set a 1000]
+        [set a -1]]
+    [set a 0]]
+
+[fprint "A: %d\n\n" a]
+```
+
 <!--
 ### 🔁 Concurrency Support
 ```morning

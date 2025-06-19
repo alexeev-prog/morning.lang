@@ -9,8 +9,6 @@
 \/\/.*                          %empty
 \/\*[\s\S]*?\*\/                %empty
 
-"nil"                           NIL
-
 [-+]?0x[0-9a-fA-F]+             HEX
 [-+]?0b[01]+                    BINARY
 [-+]?0[0-7]+                    OCTAL
@@ -38,8 +36,7 @@ enum class ExpType {
     FRACTIONAL,
     STRING,
     SYMBOL,
-    LIST,
-    NIL
+    LIST
 };
 
 struct Exp {
@@ -50,7 +47,6 @@ struct Exp {
     std::string string;
     std::vector<Exp> list;
 
-    Exp() : type(ExpType::NIL) {}
     Exp(int number) : type(ExpType::NUMBER), number(number) {}
     Exp(double fractional) : type(ExpType::FRACTIONAL), fractional(fractional) {}
 
@@ -132,7 +128,6 @@ int parseInteger(const std::string& str) {
 %token FRACTIONAL
 %token STRING
 %token SYMBOL
-%token NIL
 
 %%
 
@@ -149,7 +144,6 @@ Atom
     | FRACTIONAL { $$ = Exp(std::stod($1)) }
     | STRING    { $$ = Exp($1) }
     | SYMBOL    { $$ = Exp($1) }
-    | NIL       { $$ = Exp() }
     ;
 
 List

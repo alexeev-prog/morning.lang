@@ -34,7 +34,7 @@ add_library(
     source/morningllvm.hpp
     source/parser/MorningLangGrammar.h
 )
-target_link_libraries(morninglang_lib ${llvm_libs})
+target_link_libraries(morninglang_lib ${llvm_libs} gc)
 
 target_include_directories(
     morninglang_lib ${warning_guard}
@@ -42,7 +42,7 @@ target_include_directories(
     "\$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/source>"
 )
 
-target_compile_features(morninglang_lib PUBLIC cxx_std_23)
+target_compile_features(morninglang_lib PUBLIC cxx_std_17)
 
 # ---- Declare executable ----
 

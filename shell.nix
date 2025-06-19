@@ -56,4 +56,3 @@ pkgs.mkShell {
     export NODE_PATH="./npm-packages/lib/node_modules"
   '';
 }
-
