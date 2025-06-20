@@ -166,7 +166,7 @@ class MorningLanguageLLVM {
         generate_ir(ast);
 
         llvm::verifyModule(*m_MODULE, &llvm::errs());
-        save_module_to_file(output_base + ".ll");    // Изменено имя файла
+        save_module_to_file(output_base + ".ll");
 
         return 0;
     }
@@ -233,6 +233,10 @@ class MorningLanguageLLVM {
      **/
     std::unique_ptr<llvm::IRBuilder<>> m_VARS_BUILDER;
 
+    /**
+     * @brief Constants map
+     *
+     **/
     std::map<std::string, llvm::Value*> m_CONSTANTS;
 
     /**
@@ -566,14 +570,12 @@ class MorningLanguageLLVM {
                     }
 
                     if (oper == "if") {
-                        // Проверка минимального количества аргументов
                         if (exp.list.size() < 4) {
                             LOG_CRITICAL(
                                 "if requires at least 4 arguments: condition, block, else, else_block",
                                 exp.string.c_str());
                         }
 
-                        // Создаем блоки
                         auto* merge_block = create_basic_block("if.end");
                         std::vector<llvm::Value*> branch_values;
                         std::vector<llvm::BasicBlock*> branch_blocks;
@@ -581,10 +583,9 @@ class MorningLanguageLLVM {
                         auto* current_block = m_IR_BUILDER->GetInsertBlock();
                         m_IR_BUILDER->SetInsertPoint(current_block);
 
-                        size_t i = 1;    // первый аргумент после 'if'
+                        size_t i = 1;
                         llvm::BasicBlock* next_block = nullptr;
 
-                        // Обрабатываем все пары условий и блоков
                         while (i < exp.list.size()) {
                             if (exp.list[i].type == ExpType::SYMBOL
                                 && (exp.list[i].string == "else" || exp.list[i].string == "maybe"))
@@ -596,50 +597,41 @@ class MorningLanguageLLVM {
                                 LOG_CRITICAL("if: missing block for condition", exp.string.c_str());
                             }
 
-                            // Генерация условия
                             auto* cond = generate_expression(exp.list[i], env);
                             auto* then_block = create_basic_block("if.then", m_ACTIVE_FUNCTION);
                             next_block = create_basic_block("if.next", m_ACTIVE_FUNCTION);
 
-                            // Условный переход
                             m_IR_BUILDER->CreateCondBr(cond, then_block, next_block);
 
-                            // Генерация then-блока
                             m_IR_BUILDER->SetInsertPoint(then_block);
                             auto* then_val = generate_expression(exp.list[i + 1], env);
                             branch_values.push_back(then_val);
                             branch_blocks.push_back(then_block);
                             m_IR_BUILDER->CreateBr(merge_block);
 
-                            // Переход к обработке следующего условия
                             m_IR_BUILDER->SetInsertPoint(next_block);
                             current_block = next_block;
                             i += 2;
                         }
 
-                        // Обработка maybe/else веток
                         while (i < exp.list.size()) {
                             if (exp.list[i].type == ExpType::SYMBOL && exp.list[i].string == "maybe") {
                                 if (i + 2 >= exp.list.size()) {
                                     LOG_CRITICAL("maybe requires condition and block", exp.string.c_str());
                                 }
 
-                                // Генерация условия
                                 auto* cond = generate_expression(exp.list[i + 1], env);
                                 auto* maybe_block = create_basic_block("maybe.then", m_ACTIVE_FUNCTION);
                                 next_block = create_basic_block("maybe.next", m_ACTIVE_FUNCTION);
 
-                                // Условный переход
                                 m_IR_BUILDER->CreateCondBr(cond, maybe_block, next_block);
 
-                                // Генерация maybe-блока
                                 m_IR_BUILDER->SetInsertPoint(maybe_block);
                                 auto* maybe_val = generate_expression(exp.list[i + 2], env);
                                 branch_values.push_back(maybe_val);
                                 branch_blocks.push_back(maybe_block);
                                 m_IR_BUILDER->CreateBr(merge_block);
 
-                                // Переход к следующему блоку
                                 m_IR_BUILDER->SetInsertPoint(next_block);
                                 current_block = next_block;
                                 i += 3;
@@ -648,7 +640,6 @@ class MorningLanguageLLVM {
                                     LOG_CRITICAL("else requires block", exp.string.c_str());
                                 }
 
-                                // Генерация else-блока
                                 auto* else_block = m_IR_BUILDER->GetInsertBlock();
                                 auto* else_val = generate_expression(exp.list[i + 1], env);
                                 branch_values.push_back(else_val);
@@ -662,13 +653,10 @@ class MorningLanguageLLVM {
                             }
                         }
 
-                        // Добавляем завершающий блок
                         m_ACTIVE_FUNCTION->insert(m_ACTIVE_FUNCTION->end(), merge_block);
                         m_IR_BUILDER->SetInsertPoint(merge_block);
 
-                        // Создаем phi-узел для возвращаемых значений
                         if (!branch_values.empty()) {
-                            // Проверка одинаковости типов
                             auto* first_type = branch_values[0]->getType();
                             for (auto* val : branch_values) {
                                 if (val->getType() != first_type) {
@@ -688,6 +676,7 @@ class MorningLanguageLLVM {
                         return m_IR_BUILDER->getInt64(0);
                     }
 
+                    // Loop
                     if (oper == "loop") {
                         auto* loop_body = create_basic_block("loop.body", m_ACTIVE_FUNCTION);
                         auto* loop_exit = create_basic_block("loop.exit");
@@ -713,10 +702,12 @@ class MorningLanguageLLVM {
                         return m_IR_BUILDER->getInt64(0);
                     }
 
+                    // Func
                     if (oper == "func") {
                         return compile_function(exp, /* name */ exp.list[1].string, env);
                     }
 
+                    // While
                     if (oper == "while") {
                         auto* break_blog = create_basic_block("break");
                         auto* continue_block = create_basic_block("continue");
@@ -779,7 +770,7 @@ class MorningLanguageLLVM {
                         // Body block
                         m_ACTIVE_FUNCTION->insert(m_ACTIVE_FUNCTION->end(), body_block);
                         m_IR_BUILDER->SetInsertPoint(body_block);
-                        m_LOOP_STACK.push_back({break_blog, step_block});    // Для break/continue
+                        m_LOOP_STACK.push_back({break_blog, step_block});
                         generate_expression(body, for_env);
                         m_LOOP_STACK.pop_back();
 
@@ -792,7 +783,7 @@ class MorningLanguageLLVM {
                         m_ACTIVE_FUNCTION->insert(m_ACTIVE_FUNCTION->end(), step_block);
                         m_IR_BUILDER->SetInsertPoint(step_block);
                         generate_expression(step, for_env);
-                        m_IR_BUILDER->CreateBr(cond_block);    // Возврат к условию
+                        m_IR_BUILDER->CreateBr(cond_block);
 
                         // Break blog
                         m_ACTIVE_FUNCTION->insert(m_ACTIVE_FUNCTION->end(), break_blog);
@@ -809,7 +800,6 @@ class MorningLanguageLLVM {
                         auto& loop = m_LOOP_STACK.back();
                         m_IR_BUILDER->CreateBr(loop.break_blog);
 
-                        // Создаем и добавляем блок после break
                         auto* after = create_basic_block("after_break");
                         m_ACTIVE_FUNCTION->insert(m_ACTIVE_FUNCTION->end(), after);
                         m_IR_BUILDER->SetInsertPoint(after);
@@ -824,7 +814,6 @@ class MorningLanguageLLVM {
                         auto& loop = m_LOOP_STACK.back();
                         m_IR_BUILDER->CreateBr(loop.continue_block);
 
-                        // Создаем и добавляем блок после continue
                         auto* after = create_basic_block("after_continue");
                         m_ACTIVE_FUNCTION->insert(m_ACTIVE_FUNCTION->end(), after);
                         m_IR_BUILDER->SetInsertPoint(after);
@@ -845,7 +834,7 @@ class MorningLanguageLLVM {
                         // Then branch
                         m_IR_BUILDER->SetInsertPoint(then_block);
                         auto* then_res = generate_expression(exp.list[2], env);
-                        // Добавляем переход только если блок не завершен
+
                         if (m_IR_BUILDER->GetInsertBlock()->getTerminator() == nullptr) {
                             m_IR_BUILDER->CreateBr(if_end_block);
                         }
@@ -864,7 +853,6 @@ class MorningLanguageLLVM {
                         m_ACTIVE_FUNCTION->insert(m_ACTIVE_FUNCTION->end(), if_end_block);
                         m_IR_BUILDER->SetInsertPoint(if_end_block);
 
-                        // Создаем phi-ноду только если оба блока приходят в конец
                         if ((then_block->getTerminator() == nullptr)
                             && (else_block->getTerminator() == nullptr))
                         {

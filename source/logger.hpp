@@ -21,6 +21,14 @@ public:
         CRITICAL
     };
 
+    /**
+     * @brief Log message
+     *
+     * @tparam Args arguments
+     * @param level log level
+     * @param format format string
+     * @param args arguments
+     **/
     template <typename... Args>
     static void log(Level level, const char* format, Args... args) {
         std::string formatted = format_message(format, args...);
@@ -32,6 +40,12 @@ public:
         }
     }
 
+    /**
+     * @brief Push expression to expression stack
+     *
+     * @param context message
+     * @param expr expression
+     **/
     static void push_expression(const std::string& context, const std::string& expr) {
         expression_stack_.emplace_back(context, expr);
         if (expression_stack_.size() > MAX_STACK_SIZE) {
@@ -39,6 +53,10 @@ public:
         }
     }
 
+    /**
+     * @brief Print traceback
+     *
+     **/
     static void print_traceback() {
         if (expression_stack_.empty()) return;
 
@@ -59,6 +77,14 @@ private:
     static constexpr size_t TRACEBACK_LIMIT = 5;
     static thread_local std::vector<std::pair<std::string, std::string>> expression_stack_;
 
+    /**
+     * @brief format message
+     *
+     * @tparam Args arguments
+     * @param format format string
+     * @param args arguments
+     * @return std::string
+     **/
     template <typename... Args>
     static auto format_message(const char* format, Args... args) -> std::string {
         int size = std::snprintf(nullptr, 0, format, args...);
@@ -69,6 +95,12 @@ private:
         return std::string(buf.data());
     }
 
+    /**
+     * @brief Print log
+     *
+     * @param level log level
+     * @param message log message
+     **/
     static void print_log(Level level, const std::string& message) {
         const char* level_str = "";
         const char* color = "";

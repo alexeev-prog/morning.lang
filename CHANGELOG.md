@@ -1,3 +1,9 @@
+commit 585dcc2097490c9ce3fefc6bdccd19d9d4faf020
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Sat Jun 21 04:45:49 2025 +0700
+
+    create file structure for new architecture
+
 commit 3443c459f67b1a9c8bfb231a7bd3aa8a17c94313
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Sat Jun 21 04:33:53 2025 +0700
