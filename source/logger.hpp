@@ -56,7 +56,7 @@ public:
 
 private:
     static constexpr size_t MAX_STACK_SIZE = 100;
-    static constexpr size_t TRACEBACK_LIMIT = 3;
+    static constexpr size_t TRACEBACK_LIMIT = 5;
     static thread_local std::vector<std::pair<std::string, std::string>> expression_stack_;
 
     template <typename... Args>

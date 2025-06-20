@@ -236,6 +236,16 @@ F --> G
 ]
 ```
 
+## 🧩 if-elif-else
+```morning
+[var x 11]
+(if
+    (> x 10)       (fprint "x > 10")  // if branch
+    maybe (> x 5)  (fprint "x > 5")   // elif branch
+    else           (fprint "x <= 5")  // else branch
+)
+```
+
 ## 🧩 fcasn & fprint
 ```morning
 (var height 0)

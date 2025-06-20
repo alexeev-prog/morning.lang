@@ -11,17 +11,18 @@
 #include <llvm/Support/Alignment.h>
 #include <llvm/Support/Casting.h>
 #include <llvm/Support/raw_ostream.h>    // Output handling
+
+#include "env.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/IRBuilder.h"    // Intermediate Representation (IR) construction
 #include "llvm/IR/LLVMContext.h"    // Compilation environment isolation
 #include "llvm/IR/Module.h"    // Code container (like a source file)
-
-#include "parser/MorningLangGrammar.h"    // Grammatic Parser
-#include "env.h"
-#include "tracelogger.hpp"
 #include "logger.hpp"
+#include "parser/MorningLangGrammar.h"    // Grammatic Parser
+#include "tracelogger.hpp"
 
 // Standard libraries
+#include <cstddef>
 #include <cstdint>
 #include <map>
 #include <memory>    // Smart pointers
@@ -82,13 +83,15 @@ inline auto has_return_type(const Exp& fn_exp) -> bool {
 static auto safe_expr_to_string(const Exp& exp) -> std::string {
     switch (exp.type) {
         case ExpType::LIST: {
-            if (exp.list.empty()) return "[]";
+            if (exp.list.empty()) {
+                return "[]";
+            }
 
             std::string s = "[";
             for (const auto& e : exp.list) {
                 s += safe_expr_to_string(e) + " ";
             }
-            s.pop_back(); // Remove last space
+            s.pop_back();    // Remove last space
             s += "]";
 
             // Trim long expressions
@@ -464,9 +467,9 @@ class MorningLanguageLLVM {
         LOG_TRACE
 
         std::string context = "expr";
-        std::string expr_str = safe_expr_to_string(exp);
+        std::string const expr_str = safe_expr_to_string(exp);
 
-        if (exp.type != ExpType::NUMBER) {
+        if (exp.type != ExpType::NUMBER && exp.type != ExpType::SYMBOL) {
             if (exp.type == ExpType::LIST && !exp.list.empty()) {
                 if (exp.list[0].type == ExpType::SYMBOL) {
                     context = exp.list[0].string;
@@ -475,11 +478,20 @@ class MorningLanguageLLVM {
                 }
             } else {
                 switch (exp.type) {
-                    case ExpType::SYMBOL: context = "symbol"; break;
-                    case ExpType::NUMBER: context = "number"; break;
-                    case ExpType::FRACTIONAL: context = "fractional"; break;
-                    case ExpType::STRING: context = "string"; break;
-                    default: context = "value";
+                    case ExpType::SYMBOL:
+                        context = "symbol";
+                        break;
+                    case ExpType::NUMBER:
+                        context = "number";
+                        break;
+                    case ExpType::FRACTIONAL:
+                        context = "fractional";
+                        break;
+                    case ExpType::STRING:
+                        context = "string";
+                        break;
+                    default:
+                        context = "value";
                 }
             }
         }
@@ -517,6 +529,15 @@ class MorningLanguageLLVM {
                 }
                 return m_MODULE->getNamedGlobal(exp.string)->getInitializer();
             case ExpType::LIST:
+                if (exp.list.empty()) {
+                    LOG_CRITICAL("Empty list expression at line %d", exp.string.c_str());
+                }
+
+                auto oper = exp.list[0].string;
+                if (oper == "+" && exp.list.size() < 3) {
+                    LOG_CRITICAL("Operator '+' requires two operands at line %d", exp.string.c_str());
+                }
+
                 auto tag = exp.list[0];
 
                 if (tag.type == ExpType::SYMBOL) {
@@ -544,6 +565,129 @@ class MorningLanguageLLVM {
                         GEN_BINARY_OP(CreateICmpULE, "__tmpcmp__");
                     }
 
+                    if (oper == "if") {
+                        // Проверка минимального количества аргументов
+                        if (exp.list.size() < 4) {
+                            LOG_CRITICAL(
+                                "if requires at least 4 arguments: condition, block, else, else_block",
+                                exp.string.c_str());
+                        }
+
+                        // Создаем блоки
+                        auto* merge_block = create_basic_block("if.end");
+                        std::vector<llvm::Value*> branch_values;
+                        std::vector<llvm::BasicBlock*> branch_blocks;
+
+                        auto* current_block = m_IR_BUILDER->GetInsertBlock();
+                        m_IR_BUILDER->SetInsertPoint(current_block);
+
+                        size_t i = 1;    // первый аргумент после 'if'
+                        llvm::BasicBlock* next_block = nullptr;
+
+                        // Обрабатываем все пары условий и блоков
+                        while (i < exp.list.size()) {
+                            if (exp.list[i].type == ExpType::SYMBOL
+                                && (exp.list[i].string == "else" || exp.list[i].string == "maybe"))
+                            {
+                                break;
+                            }
+
+                            if (i + 1 >= exp.list.size()) {
+                                LOG_CRITICAL("if: missing block for condition", exp.string.c_str());
+                            }
+
+                            // Генерация условия
+                            auto* cond = generate_expression(exp.list[i], env);
+                            auto* then_block = create_basic_block("if.then", m_ACTIVE_FUNCTION);
+                            next_block = create_basic_block("if.next", m_ACTIVE_FUNCTION);
+
+                            // Условный переход
+                            m_IR_BUILDER->CreateCondBr(cond, then_block, next_block);
+
+                            // Генерация then-блока
+                            m_IR_BUILDER->SetInsertPoint(then_block);
+                            auto* then_val = generate_expression(exp.list[i + 1], env);
+                            branch_values.push_back(then_val);
+                            branch_blocks.push_back(then_block);
+                            m_IR_BUILDER->CreateBr(merge_block);
+
+                            // Переход к обработке следующего условия
+                            m_IR_BUILDER->SetInsertPoint(next_block);
+                            current_block = next_block;
+                            i += 2;
+                        }
+
+                        // Обработка maybe/else веток
+                        while (i < exp.list.size()) {
+                            if (exp.list[i].type == ExpType::SYMBOL && exp.list[i].string == "maybe") {
+                                if (i + 2 >= exp.list.size()) {
+                                    LOG_CRITICAL("maybe requires condition and block", exp.string.c_str());
+                                }
+
+                                // Генерация условия
+                                auto* cond = generate_expression(exp.list[i + 1], env);
+                                auto* maybe_block = create_basic_block("maybe.then", m_ACTIVE_FUNCTION);
+                                next_block = create_basic_block("maybe.next", m_ACTIVE_FUNCTION);
+
+                                // Условный переход
+                                m_IR_BUILDER->CreateCondBr(cond, maybe_block, next_block);
+
+                                // Генерация maybe-блока
+                                m_IR_BUILDER->SetInsertPoint(maybe_block);
+                                auto* maybe_val = generate_expression(exp.list[i + 2], env);
+                                branch_values.push_back(maybe_val);
+                                branch_blocks.push_back(maybe_block);
+                                m_IR_BUILDER->CreateBr(merge_block);
+
+                                // Переход к следующему блоку
+                                m_IR_BUILDER->SetInsertPoint(next_block);
+                                current_block = next_block;
+                                i += 3;
+                            } else if (exp.list[i].type == ExpType::SYMBOL && exp.list[i].string == "else") {
+                                if (i + 1 >= exp.list.size()) {
+                                    LOG_CRITICAL("else requires block", exp.string.c_str());
+                                }
+
+                                // Генерация else-блока
+                                auto* else_block = m_IR_BUILDER->GetInsertBlock();
+                                auto* else_val = generate_expression(exp.list[i + 1], env);
+                                branch_values.push_back(else_val);
+                                branch_blocks.push_back(else_block);
+                                m_IR_BUILDER->CreateBr(merge_block);
+                                i += 2;
+                                break;
+                            } else {
+                                LOG_CRITICAL("expected maybe or else after if conditions",
+                                             exp.string.c_str());
+                            }
+                        }
+
+                        // Добавляем завершающий блок
+                        m_ACTIVE_FUNCTION->insert(m_ACTIVE_FUNCTION->end(), merge_block);
+                        m_IR_BUILDER->SetInsertPoint(merge_block);
+
+                        // Создаем phi-узел для возвращаемых значений
+                        if (!branch_values.empty()) {
+                            // Проверка одинаковости типов
+                            auto* first_type = branch_values[0]->getType();
+                            for (auto* val : branch_values) {
+                                if (val->getType() != first_type) {
+                                    LOG_CRITICAL("if: all branches must return same type",
+                                                 exp.string.c_str());
+                                }
+                            }
+
+                            auto* phi =
+                                m_IR_BUILDER->CreatePHI(first_type, branch_values.size(), "if_result");
+                            for (size_t idx = 0; idx < branch_values.size(); idx++) {
+                                phi->addIncoming(branch_values[idx], branch_blocks[idx]);
+                            }
+                            return phi;
+                        }
+
+                        return m_IR_BUILDER->getInt64(0);
+                    }
+
                     if (oper == "loop") {
                         auto* loop_body = create_basic_block("loop.body", m_ACTIVE_FUNCTION);
                         auto* loop_exit = create_basic_block("loop.exit");
@@ -551,7 +695,7 @@ class MorningLanguageLLVM {
                         m_IR_BUILDER->CreateBr(loop_body);
                         m_IR_BUILDER->SetInsertPoint(loop_body);
 
-                        LoopBlocks loop_blocks = {loop_exit, loop_body};
+                        LoopBlocks const loop_blocks = {loop_exit, loop_body};
                         m_LOOP_STACK.push_back(loop_blocks);
 
                         for (size_t i = 1; i < exp.list.size(); i++) {
@@ -612,7 +756,8 @@ class MorningLanguageLLVM {
                         auto body = exp.list[4];
 
                         // `for` environment
-                        auto for_env = std::make_shared<Environment>(std::map<std::string, llvm::Value*>(), env);
+                        auto for_env =
+                            std::make_shared<Environment>(std::map<std::string, llvm::Value*>(), env);
 
                         // Generate init expression
                         generate_expression(init, for_env);
@@ -634,7 +779,7 @@ class MorningLanguageLLVM {
                         // Body block
                         m_ACTIVE_FUNCTION->insert(m_ACTIVE_FUNCTION->end(), body_block);
                         m_IR_BUILDER->SetInsertPoint(body_block);
-                        m_LOOP_STACK.push_back({break_blog, step_block}); // Для break/continue
+                        m_LOOP_STACK.push_back({break_blog, step_block});    // Для break/continue
                         generate_expression(body, for_env);
                         m_LOOP_STACK.pop_back();
 
@@ -647,7 +792,7 @@ class MorningLanguageLLVM {
                         m_ACTIVE_FUNCTION->insert(m_ACTIVE_FUNCTION->end(), step_block);
                         m_IR_BUILDER->SetInsertPoint(step_block);
                         generate_expression(step, for_env);
-                        m_IR_BUILDER->CreateBr(cond_block); // Возврат к условию
+                        m_IR_BUILDER->CreateBr(cond_block);    // Возврат к условию
 
                         // Break blog
                         m_ACTIVE_FUNCTION->insert(m_ACTIVE_FUNCTION->end(), break_blog);
@@ -658,7 +803,7 @@ class MorningLanguageLLVM {
 
                     if (oper == "break") {
                         if (m_LOOP_STACK.empty()) {
-                            LOG_CRITICAL("break outside of loop");
+                            LOG_CRITICAL("break outside of loop", exp.string.c_str());
                         }
 
                         auto& loop = m_LOOP_STACK.back();
@@ -674,7 +819,7 @@ class MorningLanguageLLVM {
 
                     if (oper == "continue") {
                         if (m_LOOP_STACK.empty()) {
-                            LOG_CRITICAL("continue outside of loop");
+                            LOG_CRITICAL("continue outside of loop", exp.string.c_str());
                         }
                         auto& loop = m_LOOP_STACK.back();
                         m_IR_BUILDER->CreateBr(loop.continue_block);
@@ -701,7 +846,7 @@ class MorningLanguageLLVM {
                         m_IR_BUILDER->SetInsertPoint(then_block);
                         auto* then_res = generate_expression(exp.list[2], env);
                         // Добавляем переход только если блок не завершен
-                        if (!m_IR_BUILDER->GetInsertBlock()->getTerminator()) {
+                        if (m_IR_BUILDER->GetInsertBlock()->getTerminator() == nullptr) {
                             m_IR_BUILDER->CreateBr(if_end_block);
                         }
                         then_block = m_IR_BUILDER->GetInsertBlock();
@@ -710,7 +855,7 @@ class MorningLanguageLLVM {
                         m_ACTIVE_FUNCTION->insert(m_ACTIVE_FUNCTION->end(), else_block);
                         m_IR_BUILDER->SetInsertPoint(else_block);
                         auto* else_res = generate_expression(exp.list[3], env);
-                        if (!m_IR_BUILDER->GetInsertBlock()->getTerminator()) {
+                        if (m_IR_BUILDER->GetInsertBlock()->getTerminator() == nullptr) {
                             m_IR_BUILDER->CreateBr(if_end_block);
                         }
                         else_block = m_IR_BUILDER->GetInsertBlock();
@@ -720,7 +865,9 @@ class MorningLanguageLLVM {
                         m_IR_BUILDER->SetInsertPoint(if_end_block);
 
                         // Создаем phi-ноду только если оба блока приходят в конец
-                        if (!then_block->getTerminator() && !else_block->getTerminator()) {
+                        if ((then_block->getTerminator() == nullptr)
+                            && (else_block->getTerminator() == nullptr))
+                        {
                             auto* phi = m_IR_BUILDER->CreatePHI(then_res->getType(), 2, "__tmpcheck__");
                             phi->addIncoming(then_res, then_block);
                             phi->addIncoming(else_res, else_block);
@@ -767,7 +914,8 @@ class MorningLanguageLLVM {
                     if (oper == "scope") {
                         llvm::Value* block_res = nullptr;
 
-                        auto block_env = std::make_shared<Environment>(std::map<std::string, llvm::Value*> {}, env);
+                        auto block_env =
+                            std::make_shared<Environment>(std::map<std::string, llvm::Value*> {}, env);
 
                         for (auto i = 1; i < exp.list.size(); i++) {
                             block_res = generate_expression(exp.list[i], block_env);
@@ -788,7 +936,6 @@ class MorningLanguageLLVM {
                     }
 
                     if (oper == "finput") {
-
                         auto* scanf_fn = m_MODULE->getFunction("scanf");
                         std::vector<llvm::Value*> args;
 
@@ -797,7 +944,7 @@ class MorningLanguageLLVM {
 
                         // Variable references
                         for (size_t i = 2; i < exp.list.size(); ++i) {
-                            std::string var_name = exp.list[i].string;
+                            std::string const var_name = exp.list[i].string;
                             llvm::Value* var_ptr = env->lookup_by_name(var_name);
                             args.push_back(var_ptr);
                         }
@@ -842,10 +989,9 @@ class MorningLanguageLLVM {
         m_MODULE->getOrInsertFunction("printf",
                                       llvm::FunctionType::get(m_IR_BUILDER->getInt64Ty(), byte_ptr_ty, true));
 
-        auto* scanf_type = llvm::FunctionType::get(
-            m_IR_BUILDER->getInt32Ty(),
-            {m_IR_BUILDER->getInt8Ty()->getPointerTo()},
-            true // variadic
+        auto* scanf_type = llvm::FunctionType::get(m_IR_BUILDER->getInt32Ty(),
+                                                   {m_IR_BUILDER->getInt8Ty()->getPointerTo()},
+                                                   true    // variadic
         );
         m_MODULE->getOrInsertFunction("scanf", scanf_type);
     }

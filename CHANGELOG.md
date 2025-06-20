@@ -1,3 +1,9 @@
+commit 5a95e27b78305599c34e3ad8f7c840d081fcb95b
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Sat Jun 21 04:07:22 2025 +0700
+
+    refactor code and docs
+
 commit 3df055715cd20e73943a3712418c3fcdf9867da5
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Fri Jun 20 23:43:25 2025 +0700

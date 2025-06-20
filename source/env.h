@@ -41,7 +41,7 @@ class Environment : public std::enable_shared_from_this<Environment> {
 
         if (m_PARENT == nullptr) {
             LOG_CRITICAL("Variable \"%s\" is not defined", name.c_str());
-            return nullptr; // Never reached but for safety
+            return nullptr;    // Never reached but for safety
         }
 
         return m_PARENT->resolve(name);
