@@ -11,7 +11,15 @@
 
 namespace fs = std::filesystem;
 
+/**
+ * @brief Anaonymous namespace
+ *
+ **/
 namespace {
+    /**
+     * @brief Print help info
+     *
+     **/
     void print_help() {
         std::cout << "\nUsage: morningllvm [options]\n\n"
                   << "Options:\n"
@@ -20,8 +28,14 @@ namespace {
                   << "    -o, --output      Output binary name\n\n";
     }
 
-    // Проверка доступности компилятора в системе
-    bool is_compiler_available(const std::string& compiler) {
+    /**
+     * @brief Check is util is available (crossplatform)
+     *
+     * @param compiler util name
+     * @return true
+     * @return false
+     **/
+    auto is_compiler_available(const std::string& compiler) -> bool {
         #ifdef _WIN32
         std::string cmd = "where " + compiler + " >nul 2>nul";
         #else
@@ -30,8 +44,13 @@ namespace {
         return system(cmd.c_str()) == 0;
     }
 
-    // Безопасное выполнение команд
-    int execute_command(const std::string& cmd) {
+    /**
+     * @brief Safe command execution
+     *
+     * @param cmd command
+     * @return int
+     **/
+    auto execute_command(const std::string& cmd) -> int {
         #ifdef _WIN32
         return system((cmd + " >nul 2>nul").c_str());
         #else
@@ -39,8 +58,13 @@ namespace {
         #endif
     }
 
-    // Обработка путей с кавычками для безопасности
-    std::string safe_path(const std::string& path) {
+    /**
+     * @brief Generate safe path
+     *
+     * @param path raw path
+     * @return std::string
+     **/
+    auto safe_path(const std::string& path) -> std::string {
         if (path.empty()) return "\"\"";
         if (path.find(' ') != std::string::npos) {
             return "\"" + path + "\"";
@@ -48,8 +72,14 @@ namespace {
         return path;
     }
 
-    // Компиляция IR с проверками на каждом этапе
-    bool compile_ir(const std::string& output_base) {
+    /**
+     * @brief Compile generated IR to binary
+     *
+     * @param output_base output base filename
+     * @return true
+     * @return false
+     **/
+    auto compile_ir(const std::string& output_base) -> bool {
         const std::string ll_file = output_base + ".ll";
         const std::string opt_ll_file = output_base + "-opt.ll";
         const std::string bin_file = output_base;
@@ -93,7 +123,11 @@ namespace {
         return true;
     }
 
-    // Безопасное удаление временных файлов
+    /**
+     * @brief Safe cleanup temp files
+     *
+     * @param output_base output base filename
+     **/
     void cleanup_temp_files(const std::string& output_base) {
         auto safe_remove = [](const std::string& path) {
             try {
@@ -109,8 +143,13 @@ namespace {
         safe_remove(output_base + "-opt.ll");
     }
 
-    // Проверка доступности всех необходимых компиляторов
-    bool check_compilers_available() {
+    /**
+     * @brief Check all utils is available
+     *
+     * @return true
+     * @return false
+     **/
+    auto check_compilers_available() -> bool {
         const std::vector<std::string> required_compilers = {"opt", "clang++"};
 
         for (const auto& compiler : required_compilers) {
@@ -122,8 +161,14 @@ namespace {
         return true;
     }
 
-    // Проверка корректности имени выходного файла
-    bool is_valid_output_name(const std::string& name) {
+    /**
+     * @brief Check is valid output name
+     *
+     * @param name output name
+     * @return true
+     * @return false
+     **/
+    auto is_valid_output_name(const std::string& name) -> bool {
         if (name.empty()) return false;
 
         // Список запрещенных символов
@@ -133,14 +178,32 @@ namespace {
         });
     }
 }
+
+/**
+ * @brief Command Arguments Parser
+ *
+ **/
 class InputParser{
     public:
+        /**
+         * @brief Construct a new Input Parser object
+         *
+         * @param argc arguments count
+         * @param argv arguments list
+         **/
         InputParser (int &argc, char **argv){
             for (int i=1; i < argc; ++i) {
                 this->m_TOKENS.emplace_back(argv[i]);
             }
         }
 
+        /**
+         * @brief Get the command option value
+         *
+         * @param option first short option (ex. -h)
+         * @param option2 second long option (ex. --help)
+         * @return const std::string&
+         **/
         auto get_cmd_option(const std::string &option, const std::string &option2 = "") const -> const std::string&{
             std::vector<std::string>::const_iterator itr;
             itr =  boost::range::find(this->m_TOKENS, option);
@@ -163,6 +226,13 @@ class InputParser{
             return EMPTY_STRING;
         }
 
+        /**
+         * @brief Check option is exists
+         *
+         * @param option option name
+         * @return true
+         * @return false
+         **/
         auto cmd_option_exists(const std::string &option) const -> bool{
             return boost::range::find(this->m_TOKENS, option)
                    != this->m_TOKENS.end();
@@ -171,7 +241,13 @@ class InputParser{
         std::vector <std::string> m_TOKENS;
 };
 
-
+/**
+ * @brief Entrypoint
+ *
+ * @param argc args count
+ * @param argv args list
+ * @return int
+ **/
 auto main(int argc, char **argv) -> int {
     InputParser input(argc, argv);
     MorningLanguageLLVM morning_vm;

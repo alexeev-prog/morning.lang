@@ -183,6 +183,10 @@ class MorningLanguageLLVM {
      **/
     std::unique_ptr<llvm::IRBuilder<>> m_VARS_BUILDER;
 
+    /**
+     * @brief Set the up triple object
+     *
+     **/
     void setup_triple() { m_MODULE->setTargetTriple("x86_64-unknown-linux-gnu"); }
 
     /**
@@ -192,7 +196,7 @@ class MorningLanguageLLVM {
         LOG_TRACE
 
         std::map<std::string, llvm::Value*> const GLOBAL_OBJECT {
-            {"_VERSION", m_IR_BUILDER->getInt64(200)},
+            {"_VERSION", m_IR_BUILDER->getInt64(300)},
         };
 
         std::map<std::string, llvm::Value*> global_rec {};
