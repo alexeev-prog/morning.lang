@@ -1,3 +1,9 @@
+commit 00719f763bbdc3a23d7d88d357293dd447d4d4a9
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Fri Jun 20 06:59:27 2025 +0700
+
+    fix bugs, add compiling to binary object, add CLI app
+
 commit ea9d6cf3123bbdf83125bba252c9cbbb654fec11
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Thu Jun 19 19:44:55 2025 +0700

@@ -39,6 +39,19 @@
   <img src="https://raw.githubusercontent.com/alexeev-prog/morning.lang/refs/heads/main/docs/pallet-0.png" width="600" alt="Color Palette">
 </div>
 
+## Usage
+
+```
+Usage: morningllvm [options]
+
+Options:
+    -e, --expression  Expression to parse
+    -f, --file        File to parse
+    -o, --output      Output binary name
+```
+
+## Example
+
 ```
 [func square (x) (* x x)]
 
