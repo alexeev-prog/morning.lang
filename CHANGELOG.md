@@ -1,3 +1,9 @@
+commit 3df055715cd20e73943a3712418c3fcdf9867da5
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Fri Jun 20 23:43:25 2025 +0700
+
+    add logger, tracebacks and expression stacks
+
 commit a8d40279144d01d40de356b24ed9ba8604ca1eef
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Fri Jun 20 11:40:01 2025 +0700

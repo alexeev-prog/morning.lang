@@ -1,0 +1,11 @@
+[var counter 0]
+[loop
+	[scope
+	    [set counter (+ counter 1)]
+	    [fprint "Счетчик: %d\n" counter]
+	    [check (== counter 5)
+	        [break]
+	        []
+	    ]
+	]
+]

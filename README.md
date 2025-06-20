@@ -22,12 +22,12 @@
 <br>
 
 <div align="center">
-  <img src="https://img.shields.io/github/languages/top/alexeev-prog/morning.lang?style=for-the-badge&color=blueviolet" alt="Top Language">
-  <img src="https://img.shields.io/github/languages/count/alexeev-prog/morning.lang?style=for-the-badge&color=success" alt="Language Count">
+  <img src="https://img.shields.io/github/languages/top/alexeev-prog/morning.lang?style=for-the-badge" alt="Top Language">
+  <img src="https://img.shields.io/github/languages/count/alexeev-prog/morning.lang?style=for-the-badge" alt="Language Count">
   <img src="https://img.shields.io/github/license/alexeev-prog/morning.lang?style=for-the-badge" alt="License">
   <img src="https://img.shields.io/github/issues/alexeev-prog/morning.lang?style=for-the-badge&color=critical" alt="Issues">
-  <img src="https://img.shields.io/github/last-commit/alexeev-prog/morning.lang?style=for-the-badge&color=informational" alt="Last Commit">
-  <img src="https://img.shields.io/github/contributors/alexeev-prog/morning.lang?style=for-the-badge&color=ff69b4" alt="Contributors">
+  <img src="https://img.shields.io/github/last-commit/alexeev-prog/morning.lang?style=for-the-badge" alt="Last Commit">
+  <img src="https://img.shields.io/github/contributors/alexeev-prog/morning.lang?style=for-the-badge" alt="Contributors">
 </div>
 
 <div align="center" style="margin: 15px 0">
@@ -219,6 +219,21 @@ F --> G
     )
 )
 (fprint "x = %d\n" x)
+```
+
+## 🧩 Loops
+```morning
+[var counter 0]
+[loop
+	[scope
+	    [set counter (+ counter 1)]
+	    [fprint "Счетчик: %d\n" counter]
+	    [check (== counter 5)
+	        [break]
+	        []
+	    ]
+	]
+]
 ```
 
 ## 🧩 fcasn & fprint

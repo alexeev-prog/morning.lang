@@ -544,6 +544,31 @@ class MorningLanguageLLVM {
                         GEN_BINARY_OP(CreateICmpULE, "__tmpcmp__");
                     }
 
+                    if (oper == "loop") {
+                        auto* loop_body = create_basic_block("loop.body", m_ACTIVE_FUNCTION);
+                        auto* loop_exit = create_basic_block("loop.exit");
+
+                        m_IR_BUILDER->CreateBr(loop_body);
+                        m_IR_BUILDER->SetInsertPoint(loop_body);
+
+                        LoopBlocks loop_blocks = {loop_exit, loop_body};
+                        m_LOOP_STACK.push_back(loop_blocks);
+
+                        for (size_t i = 1; i < exp.list.size(); i++) {
+                            generate_expression(exp.list[i], env);
+                        }
+
+                        if (m_IR_BUILDER->GetInsertBlock()->getTerminator() == nullptr) {
+                            m_IR_BUILDER->CreateBr(loop_body);
+                        }
+
+                        m_ACTIVE_FUNCTION->insert(m_ACTIVE_FUNCTION->end(), loop_exit);
+                        m_IR_BUILDER->SetInsertPoint(loop_exit);
+                        m_LOOP_STACK.pop_back();
+
+                        return m_IR_BUILDER->getInt64(0);
+                    }
+
                     if (oper == "func") {
                         return compile_function(exp, /* name */ exp.list[1].string, env);
                     }
