@@ -40,3 +40,4 @@ npm-packages/
 out.bin
 .codechecker
 report.html
+create_headers.py

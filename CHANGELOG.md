@@ -1,3 +1,9 @@
+commit 3443c459f67b1a9c8bfb231a7bd3aa8a17c94313
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Sat Jun 21 04:33:53 2025 +0700
+
+    feat: add if-elif-else, improve code style
+
 commit 5a95e27b78305599c34e3ad8f7c840d081fcb95b
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Sat Jun 21 04:07:22 2025 +0700
