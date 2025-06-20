@@ -1,0 +1,5 @@
+(var height 0)
+
+(fprint "Enter height: ")
+(finput "%d" height)
+(fprint "%d\n" height)

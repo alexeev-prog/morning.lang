@@ -695,6 +695,24 @@ class MorningLanguageLLVM {
                         return m_IR_BUILDER->CreateCall(printf_function, args);
                     }
 
+                    if (oper == "finput") {
+
+                        auto* scanf_fn = m_MODULE->getFunction("scanf");
+                        std::vector<llvm::Value*> args;
+
+                        // Format string
+                        args.push_back(generate_expression(exp.list[1], env));
+
+                        // Variable references
+                        for (size_t i = 2; i < exp.list.size(); ++i) {
+                            std::string var_name = exp.list[i].string;
+                            llvm::Value* var_ptr = env->lookup_by_name(var_name);
+                            args.push_back(var_ptr);
+                        }
+
+                        return m_IR_BUILDER->CreateCall(scanf_fn, args);
+                    }
+
                     // Function calls
 
                     auto* callable = generate_expression(exp.list[0], env);
@@ -731,6 +749,13 @@ class MorningLanguageLLVM {
         // int printf(const char* format, ...);
         m_MODULE->getOrInsertFunction("printf",
                                       llvm::FunctionType::get(m_IR_BUILDER->getInt64Ty(), byte_ptr_ty, true));
+
+        auto* scanf_type = llvm::FunctionType::get(
+            m_IR_BUILDER->getInt32Ty(),
+            {m_IR_BUILDER->getInt8Ty()->getPointerTo()},
+            true // variadic
+        );
+        m_MODULE->getOrInsertFunction("scanf", scanf_type);
     }
 
     /**

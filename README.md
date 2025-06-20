@@ -221,6 +221,15 @@ F --> G
 (fprint "x = %d\n" x)
 ```
 
+## 🧩 fcasn & fprint
+```morning
+(var height 0)
+
+(fprint "Enter height: ")
+(finput "%d" height)
+(fprint "%d\n" height)
+```
+
 ## 🧩 For Loop
 ```morning
 [for (var i 0) (< i 6) (set i (+ i 1))
