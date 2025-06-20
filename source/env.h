@@ -6,7 +6,7 @@
 #include <utility>
 
 #include "llvm/IR/Value.h"
-#include "logger.h"
+#include "logger.hpp"
 #include "tracelogger.hpp"
 
 class Environment : public std::enable_shared_from_this<Environment> {
@@ -35,12 +35,13 @@ class Environment : public std::enable_shared_from_this<Environment> {
     auto resolve(const std::string& name) -> std::shared_ptr<Environment> {
         LOG_TRACE
 
-        if (m_RECORD.count(name) != 0) {
+        if (m_RECORD.find(name) != m_RECORD.end()) {
             return shared_from_this();
         }
 
         if (m_PARENT == nullptr) {
-            DIE << "Varible \"" << name << "\" is not defined.\n";
+            LOG_CRITICAL("Variable \"%s\" is not defined", name.c_str());
+            return nullptr; // Never reached but for safety
         }
 
         return m_PARENT->resolve(name);

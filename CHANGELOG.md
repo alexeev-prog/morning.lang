@@ -1,3 +1,9 @@
+commit a8d40279144d01d40de356b24ed9ba8604ca1eef
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Fri Jun 20 11:40:01 2025 +0700
+
+    add scanf
+
 commit 6d937a2bb0c81aad5c2b3c9d2f290fa880917550
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Fri Jun 20 10:59:16 2025 +0700

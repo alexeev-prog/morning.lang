@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdlib>
 #undef log
 
 #define LOG_LEVEL_DEBUG 0
@@ -148,7 +149,8 @@ inline std::mutex log_mutex;
         if (!_once)                                                                                                    \
         {                                                                                                              \
             _once = true;                                                                                              \
-            log(LOG_LEVEL_ERROR, __VA_ARGS__);                                                                         \
+            log(LOG_LEVEL_ERROR, __VA_ARGS__);                                                  \
+            exit(EXIT_FAILURE);                                                                   \
         }                                                                                                              \
     } while (0)
 #else

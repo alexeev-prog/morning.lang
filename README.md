@@ -22,12 +22,12 @@
 <br>
 
 <div align="center">
-  <img src="https://img.shields.io/github/languages/top/alexeev-prog/morning.lang?style=flat&color=blueviolet" alt="Top Language">
-  <img src="https://img.shields.io/github/languages/count/alexeev-prog/morning.lang?style=flat&color=success" alt="Language Count">
-  <img src="https://img.shields.io/github/license/alexeev-prog/morning.lang?style=flat" alt="License">
-  <img src="https://img.shields.io/github/issues/alexeev-prog/morning.lang?style=flat&color=critical" alt="Issues">
-  <img src="https://img.shields.io/github/last-commit/alexeev-prog/morning.lang?style=flat&color=informational" alt="Last Commit">
-  <img src="https://img.shields.io/github/contributors/alexeev-prog/morning.lang?style=flat&color=ff69b4" alt="Contributors">
+  <img src="https://img.shields.io/github/languages/top/alexeev-prog/morning.lang?style=for-the-badge&color=blueviolet" alt="Top Language">
+  <img src="https://img.shields.io/github/languages/count/alexeev-prog/morning.lang?style=for-the-badge&color=success" alt="Language Count">
+  <img src="https://img.shields.io/github/license/alexeev-prog/morning.lang?style=for-the-badge" alt="License">
+  <img src="https://img.shields.io/github/issues/alexeev-prog/morning.lang?style=for-the-badge&color=critical" alt="Issues">
+  <img src="https://img.shields.io/github/last-commit/alexeev-prog/morning.lang?style=for-the-badge&color=informational" alt="Last Commit">
+  <img src="https://img.shields.io/github/contributors/alexeev-prog/morning.lang?style=for-the-badge&color=ff69b4" alt="Contributors">
 </div>
 
 <div align="center" style="margin: 15px 0">

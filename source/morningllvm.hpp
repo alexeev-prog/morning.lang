@@ -11,14 +11,15 @@
 #include <llvm/Support/Alignment.h>
 #include <llvm/Support/Casting.h>
 #include <llvm/Support/raw_ostream.h>    // Output handling
-
-#include "env.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/IRBuilder.h"    // Intermediate Representation (IR) construction
 #include "llvm/IR/LLVMContext.h"    // Compilation environment isolation
 #include "llvm/IR/Module.h"    // Code container (like a source file)
+
 #include "parser/MorningLangGrammar.h"    // Grammatic Parser
+#include "env.h"
 #include "tracelogger.hpp"
+#include "logger.hpp"
 
 // Standard libraries
 #include <cstdint>
@@ -76,6 +77,37 @@ inline auto extract_var_name(const Exp& exp) -> std::string {
  **/
 inline auto has_return_type(const Exp& fn_exp) -> bool {
     return fn_exp.list[3].type == ExpType::SYMBOL && fn_exp.list[3].string == "->";
+}
+
+static auto safe_expr_to_string(const Exp& exp) -> std::string {
+    switch (exp.type) {
+        case ExpType::LIST: {
+            if (exp.list.empty()) return "[]";
+
+            std::string s = "[";
+            for (const auto& e : exp.list) {
+                s += safe_expr_to_string(e) + " ";
+            }
+            s.pop_back(); // Remove last space
+            s += "]";
+
+            // Trim long expressions
+            if (s.length() > 120) {
+                return s.substr(0, 117) + "...";
+            }
+            return s;
+        }
+        case ExpType::SYMBOL:
+            return exp.string;
+        case ExpType::NUMBER:
+            return std::to_string(exp.number);
+        case ExpType::FRACTIONAL:
+            return std::to_string(exp.fractional);
+        case ExpType::STRING:
+            return "\"" + exp.string + "\"";
+        default:
+            return "<?>";
+    }
 }
 
 /**
@@ -197,6 +229,8 @@ class MorningLanguageLLVM {
      * Tool for writing LLVM Vars instructions
      **/
     std::unique_ptr<llvm::IRBuilder<>> m_VARS_BUILDER;
+
+    std::map<std::string, llvm::Value*> m_CONSTANTS;
 
     /**
      * @brief Set the up triple object
@@ -429,6 +463,29 @@ class MorningLanguageLLVM {
     auto generate_expression(const Exp& exp, const env& env) -> llvm::Value* {
         LOG_TRACE
 
+        std::string context = "expr";
+        std::string expr_str = safe_expr_to_string(exp);
+
+        if (exp.type != ExpType::NUMBER) {
+            if (exp.type == ExpType::LIST && !exp.list.empty()) {
+                if (exp.list[0].type == ExpType::SYMBOL) {
+                    context = exp.list[0].string;
+                } else {
+                    context = "list";
+                }
+            } else {
+                switch (exp.type) {
+                    case ExpType::SYMBOL: context = "symbol"; break;
+                    case ExpType::NUMBER: context = "number"; break;
+                    case ExpType::FRACTIONAL: context = "fractional"; break;
+                    case ExpType::STRING: context = "string"; break;
+                    default: context = "value";
+                }
+            }
+        }
+
+        PUSH_EXPR_STACK(context, expr_str);
+
         switch (exp.type) {
             case ExpType::NUMBER:
                 return m_IR_BUILDER->getInt64(exp.number);
@@ -576,7 +633,7 @@ class MorningLanguageLLVM {
 
                     if (oper == "break") {
                         if (m_LOOP_STACK.empty()) {
-                            DIE << "break outside of loop";
+                            LOG_CRITICAL("break outside of loop");
                         }
 
                         auto& loop = m_LOOP_STACK.back();
@@ -592,7 +649,7 @@ class MorningLanguageLLVM {
 
                     if (oper == "continue") {
                         if (m_LOOP_STACK.empty()) {
-                            DIE << "continue outside of loop";
+                            LOG_CRITICAL("continue outside of loop");
                         }
                         auto& loop = m_LOOP_STACK.back();
                         m_IR_BUILDER->CreateBr(loop.continue_block);
@@ -649,8 +706,14 @@ class MorningLanguageLLVM {
                     }
 
                     if (oper == "set") {
-                        auto* value = generate_expression(exp.list[2], env);
                         auto var_name = exp.list[1].string;
+
+                        if (m_CONSTANTS.count(var_name) != 0U) {
+                            LOG_CRITICAL("Var name \"%s\" is constant", var_name.c_str());
+                            return m_IR_BUILDER->getInt64(0);
+                        }
+
+                        auto* value = generate_expression(exp.list[2], env);
 
                         auto* var_binding = env->lookup_by_name(var_name);
 
@@ -659,7 +722,7 @@ class MorningLanguageLLVM {
                         return value;
                     }
 
-                    if (oper == "var") {
+                    if (oper == "var" || oper == "const") {
                         auto var_name_declaration = exp.list[1];
                         auto var_name = extract_var_name(var_name_declaration);
 
@@ -668,6 +731,10 @@ class MorningLanguageLLVM {
                         auto* var_type = extract_var_type(var_name_declaration);
 
                         auto* var_binding = alloc_var(var_name, var_type, env);
+
+                        if (oper == "const") {
+                            m_CONSTANTS[var_name] = var_binding;
+                        }
 
                         return m_IR_BUILDER->CreateStore(init, var_binding);
                     }

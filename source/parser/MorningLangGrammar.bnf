@@ -62,6 +62,29 @@ struct Exp {
 
     Exp(std::vector<Exp> list) : type(ExpType::LIST), list(list) {}
 
+    std::string to_string() const {
+        switch (type) {
+            case ExpType::NUMBER:
+                return std::to_string(number);
+            case ExpType::FRACTIONAL:
+                return std::to_string(fractional);
+            case ExpType::STRING:
+                return "\"" + string + "\"";
+            case ExpType::SYMBOL:
+                return string;
+            case ExpType::LIST: {
+                std::string result = "[";
+                for (size_t i = 0; i < list.size(); ++i) {
+                    if (i > 0) result += " ";
+                    result += list[i].to_string();
+                }
+                result += "]";
+                return result;
+            }
+        }
+        return "unknown";
+    }
+
 private:
     std::string unescape(const std::string& s) {
         std::string result;
