@@ -200,14 +200,25 @@ F --> G
 
 ## 🧩 While Loop
 ```morning
-[var a 10]
-
-[while (> a 0)
-    [scope
-        [set a (- a 1)]
-        [fprint "%d " a]]]
-
-[fprint "\nA: %d\n\n" a]
+(var x 1)
+(while (> x 0)
+    (scope
+        (fprint "x = %d\n" x)
+        (check (== x 1)
+			[scope
+				[fprint "continue\n"]
+				[set x (+ x 1)]
+				(continue)
+				(continue)
+			]
+        )
+        (set x (+ x 1))
+        (check (== x 5)
+            (break)
+        )
+    )
+)
+(fprint "x = %d\n" x)
 ```
 
 ## 🧩 Check (if-then-else) conditions

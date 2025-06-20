@@ -1,3 +1,9 @@
+commit 9fa543d160ba8069e9eb2d651fe3fb5dce701efc
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Fri Jun 20 07:08:07 2025 +0700
+
+    add docstrings
+
 commit b6a98f9f9551bb67a7ed7f1190f1ae4c3874d300
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Fri Jun 20 07:00:26 2025 +0700
