@@ -78,9 +78,13 @@ inline auto has_return_type(const Exp& fn_exp) -> bool {
     return fn_exp.list[3].type == ExpType::SYMBOL && fn_exp.list[3].string == "->";
 }
 
+/**
+ * @brief Loop blocks structure
+ *
+ **/
 struct LoopBlocks {
-    llvm::BasicBlock* breakBlock;
-    llvm::BasicBlock* continueBlock;
+    llvm::BasicBlock* break_blog;
+    llvm::BasicBlock* continue_block;
 };
 
 /**
@@ -136,6 +140,10 @@ class MorningLanguageLLVM {
     /// @activeFunction: The function we're currently building (like a work-in-progress)
     llvm::Function* m_ACTIVE_FUNCTION {};
 
+    /**
+     * @brief Vector with loop blocks
+     *
+     **/
     std::vector<LoopBlocks> m_LOOP_STACK;
 
     /**
@@ -483,35 +491,85 @@ class MorningLanguageLLVM {
                         return compile_function(exp, /* name */ exp.list[1].string, env);
                     }
 
-                    // Typical while
                     if (oper == "while") {
-                        auto* breakBlock = create_basic_block("break");
-                        auto* continueBlock = create_basic_block("continue");
-                        m_LOOP_STACK.push_back({breakBlock, continueBlock});
+                        auto* break_blog = create_basic_block("break");
+                        auto* continue_block = create_basic_block("continue");
+                        m_LOOP_STACK.push_back({break_blog, continue_block});
 
-                        auto* conditionBlock = create_basic_block("cond", m_ACTIVE_FUNCTION);
-                        m_IR_BUILDER->CreateBr(conditionBlock);
+                        auto* condition_block = create_basic_block("cond", m_ACTIVE_FUNCTION);
+                        m_IR_BUILDER->CreateBr(condition_block);
 
-                        auto* bodyBlock = create_basic_block("body");
+                        auto* body_block = create_basic_block("body");
 
-                        m_IR_BUILDER->SetInsertPoint(conditionBlock);
+                        m_IR_BUILDER->SetInsertPoint(condition_block);
                         auto* condition = generate_expression(exp.list[1], env);
-                        m_IR_BUILDER->CreateCondBr(condition, bodyBlock, breakBlock);
+                        m_IR_BUILDER->CreateCondBr(condition, body_block, break_blog);
 
-                        m_ACTIVE_FUNCTION->insert(m_ACTIVE_FUNCTION->end(), bodyBlock);
-                        m_IR_BUILDER->SetInsertPoint(bodyBlock);
+                        m_ACTIVE_FUNCTION->insert(m_ACTIVE_FUNCTION->end(), body_block);
+                        m_IR_BUILDER->SetInsertPoint(body_block);
                         generate_expression(exp.list[2], env);
-                        if (!m_IR_BUILDER->GetInsertBlock()->getTerminator()) {
-                            m_IR_BUILDER->CreateBr(continueBlock);
+                        if (m_IR_BUILDER->GetInsertBlock()->getTerminator() == nullptr) {
+                            m_IR_BUILDER->CreateBr(continue_block);
                         }
 
-                        m_ACTIVE_FUNCTION->insert(m_ACTIVE_FUNCTION->end(), continueBlock);
-                        m_IR_BUILDER->SetInsertPoint(continueBlock);
-                        m_IR_BUILDER->CreateBr(conditionBlock);
+                        m_ACTIVE_FUNCTION->insert(m_ACTIVE_FUNCTION->end(), continue_block);
+                        m_IR_BUILDER->SetInsertPoint(continue_block);
+                        m_IR_BUILDER->CreateBr(condition_block);
 
-                        m_ACTIVE_FUNCTION->insert(m_ACTIVE_FUNCTION->end(), breakBlock);
-                        m_IR_BUILDER->SetInsertPoint(breakBlock);
+                        m_ACTIVE_FUNCTION->insert(m_ACTIVE_FUNCTION->end(), break_blog);
+                        m_IR_BUILDER->SetInsertPoint(break_blog);
                         m_LOOP_STACK.pop_back();
+
+                        return m_IR_BUILDER->getInt64(0);
+                    }
+
+                    if (oper == "for") {
+                        auto init = exp.list[1];
+                        auto condition = exp.list[2];
+                        auto step = exp.list[3];
+                        auto body = exp.list[4];
+
+                        // `for` environment
+                        auto for_env = std::make_shared<Environment>(std::map<std::string, llvm::Value*>(), env);
+
+                        // Generate init expression
+                        generate_expression(init, for_env);
+
+                        // Create blocks
+                        auto* cond_block = create_basic_block("for.cond", m_ACTIVE_FUNCTION);
+                        auto* body_block = create_basic_block("for.body");
+                        auto* step_block = create_basic_block("for.step");
+                        auto* break_blog = create_basic_block("for.break");
+
+                        // Conditions
+                        m_IR_BUILDER->CreateBr(cond_block);
+
+                        // Conditions block
+                        m_IR_BUILDER->SetInsertPoint(cond_block);
+                        auto* cond_value = generate_expression(condition, for_env);
+                        m_IR_BUILDER->CreateCondBr(cond_value, body_block, break_blog);
+
+                        // Body block
+                        m_ACTIVE_FUNCTION->insert(m_ACTIVE_FUNCTION->end(), body_block);
+                        m_IR_BUILDER->SetInsertPoint(body_block);
+                        m_LOOP_STACK.push_back({break_blog, step_block}); // Для break/continue
+                        generate_expression(body, for_env);
+                        m_LOOP_STACK.pop_back();
+
+                        // Step
+                        if (m_IR_BUILDER->GetInsertBlock()->getTerminator() == nullptr) {
+                            m_IR_BUILDER->CreateBr(step_block);
+                        }
+
+                        // Step block
+                        m_ACTIVE_FUNCTION->insert(m_ACTIVE_FUNCTION->end(), step_block);
+                        m_IR_BUILDER->SetInsertPoint(step_block);
+                        generate_expression(step, for_env);
+                        m_IR_BUILDER->CreateBr(cond_block); // Возврат к условию
+
+                        // Break blog
+                        m_ACTIVE_FUNCTION->insert(m_ACTIVE_FUNCTION->end(), break_blog);
+                        m_IR_BUILDER->SetInsertPoint(break_blog);
 
                         return m_IR_BUILDER->getInt64(0);
                     }
@@ -522,7 +580,7 @@ class MorningLanguageLLVM {
                         }
 
                         auto& loop = m_LOOP_STACK.back();
-                        m_IR_BUILDER->CreateBr(loop.breakBlock);
+                        m_IR_BUILDER->CreateBr(loop.break_blog);
 
                         // Создаем и добавляем блок после break
                         auto* after = create_basic_block("after_break");
@@ -537,7 +595,7 @@ class MorningLanguageLLVM {
                             DIE << "continue outside of loop";
                         }
                         auto& loop = m_LOOP_STACK.back();
-                        m_IR_BUILDER->CreateBr(loop.continueBlock);
+                        m_IR_BUILDER->CreateBr(loop.continue_block);
 
                         // Создаем и добавляем блок после continue
                         auto* after = create_basic_block("after_continue");

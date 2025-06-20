@@ -15,7 +15,7 @@ BOLD = '\033[1m'  # No Color
 # File Extension filter. You can add new extension
 cpp_extensions = (".cxx",".cpp",".c", ".hxx", ".hh", ".cc", ".hpp", ".h")
 IGNORED_DIRS = ['build', '.git', 'cmake', 'docs', 'utils', 'CMakeFiles']
-IGNORED_FILES = ['slogger.hpp']
+IGNORED_FILES = ['slogger.hpp', 'main.cpp']
 
 CLANG_FORMAT = 'clang-format'
 SPACETABS = './space2tabs.sh'

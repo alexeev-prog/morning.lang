@@ -221,6 +221,18 @@ F --> G
 (fprint "x = %d\n" x)
 ```
 
+## 🧩 For Loop
+```morning
+[for (var i 0) (< i 6) (set i (+ i 1))
+	[scope
+    	(fprint "Value: %d\n" i)
+    	[check (== i 3)
+			(break)
+		]
+    ]
+]
+```
+
 ## 🧩 Check (if-then-else) conditions
 ```morning
 [var b 100]

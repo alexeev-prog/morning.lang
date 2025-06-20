@@ -1,3 +1,9 @@
+commit 537ff96c9882c0fbf8aae0586c4b310224751285
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Fri Jun 20 10:12:08 2025 +0700
+
+    add break, continue to while loops
+
 commit 9fa543d160ba8069e9eb2d651fe3fb5dce701efc
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Fri Jun 20 07:08:07 2025 +0700
