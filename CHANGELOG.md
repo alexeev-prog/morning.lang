@@ -1,3 +1,9 @@
+commit b4b56034c508841e37cac49529ec59f920334391
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Sat Jun 21 21:46:24 2025 +0700
+
+    refactor: improve architecture, start refactoring
+
 commit e7784636556d658848fd2e06d11fe0f1668e71ec
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Sat Jun 21 04:51:19 2025 +0700

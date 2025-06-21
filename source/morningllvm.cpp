@@ -1,72 +1,120 @@
 #include "morningllvm.hpp"
+#include "logger.hpp"
 
-/**
- * @brief Replace regex in string
- *
- * @param str string for replacing text in string by regex templates
- * @return std::string
- **/
-static auto replace_regex_in_string(const std::string& str) -> std::string {
-    auto regex_newline = std::regex("\\\\n");
-    auto regex_tab = std::regex("\\\\t");
+namespace {
+    /**
+    * @brief Replace regex in string
+    *
+    * @param str string for replacing text in string by regex templates
+    * @return std::string
+    **/
+    static auto replace_regex_in_string(const std::string& str) -> std::string {
+        auto regex_newline = std::regex("\\\\n");
+        auto regex_tab = std::regex("\\\\t");
 
-    auto newlined = std::regex_replace(str, regex_newline, "\n");
-    auto tabed = std::regex_replace(newlined, regex_tab, "\t");
+        auto newlined = std::regex_replace(str, regex_newline, "\n");
+        auto tabed = std::regex_replace(newlined, regex_tab, "\t");
 
-    return tabed;
-}
+        return tabed;
+    }
 
-/**
- * @brief Extract name from variable
- *
- * @param exp exp
- * @return std::string
- **/
-static auto extract_var_name(const Exp& exp) -> std::string {
-    return exp.type == ExpType::LIST ? exp.list[0].string : exp.string;
-}
+    /**
+    * @brief Extract name from variable
+    *
+    * @param exp exp
+    * @return std::string
+    **/
+    static auto extract_var_name(const Exp& exp) -> std::string {
+        return exp.type == ExpType::LIST ? exp.list[0].string : exp.string;
+    }
 
-/**
- * @brief Check if function has a return type
- *
- * @param fn_exp function exp
- * @return true
- * @return false
- **/
-static auto has_return_type(const Exp& fn_exp) -> bool {
-    return fn_exp.list[3].type == ExpType::SYMBOL && fn_exp.list[3].string == "->";
-}
+    /**
+    * @brief Check if function has a return type
+    *
+    * @param fn_exp function exp
+    * @return true
+    * @return false
+    **/
+    auto has_return_type(const Exp& fn_exp) -> bool {
+        return fn_exp.list[3].type == ExpType::SYMBOL && fn_exp.list[3].string == "->";
+    }
 
-static auto safe_expr_to_string(const Exp& exp) -> std::string {
-    switch (exp.type) {
-        case ExpType::LIST: {
-            if (exp.list.empty()) {
-                return "[]";
+    /**
+     * @brief Safe expression converting to string
+     *
+     * @param exp expression for converting
+     * @return std::string converted string expression
+     **/
+    auto safe_expr_to_string(const Exp& exp) -> std::string {
+        switch (exp.type) {
+            case ExpType::LIST: {
+                if (exp.list.empty()) {
+                    return "[]";
+                }
+
+                std::string s = "[";
+                for (const auto& e : exp.list) {
+                    s += safe_expr_to_string(e) + " ";
+                }
+                s.pop_back();    // Remove last space
+                s += "]";
+
+                // Trim long expressions
+                if (s.length() > 120) {
+                    return s.substr(0, 117) + "...";
+                }
+                return s;
             }
-
-            std::string s = "[";
-            for (const auto& e : exp.list) {
-                s += safe_expr_to_string(e) + " ";
-            }
-            s.pop_back();    // Remove last space
-            s += "]";
-
-            // Trim long expressions
-            if (s.length() > 120) {
-                return s.substr(0, 117) + "...";
-            }
-            return s;
+            case ExpType::SYMBOL:
+                return exp.string;
+            case ExpType::NUMBER:
+                return std::to_string(exp.number);
+            case ExpType::FRACTIONAL:
+                return std::to_string(exp.fractional);
+            case ExpType::STRING:
+                return "\"" + exp.string + "\"";
+            default:
+                return "<?>";
         }
-        case ExpType::SYMBOL:
-            return exp.string;
-        case ExpType::NUMBER:
-            return std::to_string(exp.number);
-        case ExpType::FRACTIONAL:
-            return std::to_string(exp.fractional);
-        case ExpType::STRING:
-            return "\"" + exp.string + "\"";
-        default:
-            return "<?>";
+    }
+
+    /**
+     * @brief Add expression to traceback expressions stack.
+     *
+     * @param exp expression for adding
+     **/
+    void add_expression_to_traceback_stack(const Exp& exp) {
+        std::string context = "expr";
+        std::string const EXPR_STR = safe_expr_to_string(exp);
+
+        if (exp.type != ExpType::NUMBER && exp.type != ExpType::SYMBOL) {
+            if (exp.type == ExpType::LIST && !exp.list.empty()) {
+                if (exp.list[0].type == ExpType::SYMBOL) {
+                    context = exp.list[0].string;
+                } else {
+                    context = "list";
+                }
+            } else {
+                switch (exp.type) {
+                    case ExpType::SYMBOL:
+                        context = "symbol";
+                        break;
+                    case ExpType::NUMBER:
+                        context = "number";
+                        break;
+                    case ExpType::FRACTIONAL:
+                        context = "fractional";
+                        break;
+                    case ExpType::STRING:
+                        context = "string";
+                        break;
+                    default:
+                        context = "value";
+                }
+            }
+        }
+
+        PUSH_EXPR_STACK(context, EXPR_STR);
     }
 }
 
@@ -247,37 +295,7 @@ auto MorningLanguageLLVM::compile_function(const Exp& fn_exp, const std::string&
 auto MorningLanguageLLVM::generate_expression(const Exp& exp, const env& env) -> llvm::Value* {
     LOG_TRACE
 
-    std::string context = "expr";
-    std::string const expr_str = safe_expr_to_string(exp);
-
-    if (exp.type != ExpType::NUMBER && exp.type != ExpType::SYMBOL) {
-        if (exp.type == ExpType::LIST && !exp.list.empty()) {
-            if (exp.list[0].type == ExpType::SYMBOL) {
-                context = exp.list[0].string;
-            } else {
-                context = "list";
-            }
-        } else {
-            switch (exp.type) {
-                case ExpType::SYMBOL:
-                    context = "symbol";
-                    break;
-                case ExpType::NUMBER:
-                    context = "number";
-                    break;
-                case ExpType::FRACTIONAL:
-                    context = "fractional";
-                    break;
-                case ExpType::STRING:
-                    context = "string";
-                    break;
-                default:
-                    context = "value";
-            }
-        }
-    }
-
-    PUSH_EXPR_STACK(context, expr_str);
+    add_expression_to_traceback_stack(exp);
 
     switch (exp.type) {
         case ExpType::NUMBER:
@@ -311,12 +329,12 @@ auto MorningLanguageLLVM::generate_expression(const Exp& exp, const env& env) ->
             return m_MODULE->getNamedGlobal(exp.string)->getInitializer();
         case ExpType::LIST:
             if (exp.list.empty()) {
-                LOG_CRITICAL("Empty list expression at line %d", exp.string.c_str());
+                LOG_CRITICAL("Empty list expression at line %s", exp.list[1].string.c_str());
             }
 
             auto oper = exp.list[0].string;
             if (oper == "+" && exp.list.size() < 3) {
-                LOG_CRITICAL("Operator '+' requires two operands at line %d", exp.string.c_str());
+                LOG_CRITICAL("Operator '+' requires two operands at line %s", exp.list[1].string.c_str());
             }
 
             auto tag = exp.list[0];
@@ -347,6 +365,8 @@ auto MorningLanguageLLVM::generate_expression(const Exp& exp, const env& env) ->
                 }
 
                 if (oper == "if") {
+                    LOG_DEBUG("Process if-elif-else: %s",exp.list[1].string.c_str());
+
                     if (exp.list.size() < 4) {
                         LOG_CRITICAL(
                             "if requires at least 4 arguments: condition, block, else, else_block",
@@ -365,7 +385,7 @@ auto MorningLanguageLLVM::generate_expression(const Exp& exp, const env& env) ->
 
                     while (i < exp.list.size()) {
                         if (exp.list[i].type == ExpType::SYMBOL
-                            && (exp.list[i].string == "else" || exp.list[i].string == "maybe"))
+                            && (exp.list[i].string == "else" || exp.list[i].string == "elif"))
                         {
                             break;
                         }
@@ -392,21 +412,21 @@ auto MorningLanguageLLVM::generate_expression(const Exp& exp, const env& env) ->
                     }
 
                     while (i < exp.list.size()) {
-                        if (exp.list[i].type == ExpType::SYMBOL && exp.list[i].string == "maybe") {
+                        if (exp.list[i].type == ExpType::SYMBOL && exp.list[i].string == "elif") {
                             if (i + 2 >= exp.list.size()) {
-                                LOG_CRITICAL("maybe requires condition and block", exp.string.c_str());
+                                LOG_CRITICAL("elif requires condition and block", exp.string.c_str());
                             }
 
                             auto* cond = generate_expression(exp.list[i + 1], env);
-                            auto* maybe_block = create_basic_block("maybe.then", m_ACTIVE_FUNCTION);
-                            next_block = create_basic_block("maybe.next", m_ACTIVE_FUNCTION);
+                            auto* elif_block = create_basic_block("elif.then", m_ACTIVE_FUNCTION);
+                            next_block = create_basic_block("elif.next", m_ACTIVE_FUNCTION);
 
-                            m_IR_BUILDER->CreateCondBr(cond, maybe_block, next_block);
+                            m_IR_BUILDER->CreateCondBr(cond, elif_block, next_block);
 
-                            m_IR_BUILDER->SetInsertPoint(maybe_block);
-                            auto* maybe_val = generate_expression(exp.list[i + 2], env);
-                            branch_values.push_back(maybe_val);
-                            branch_blocks.push_back(maybe_block);
+                            m_IR_BUILDER->SetInsertPoint(elif_block);
+                            auto* elif_val = generate_expression(exp.list[i + 2], env);
+                            branch_values.push_back(elif_val);
+                            branch_blocks.push_back(elif_block);
                             m_IR_BUILDER->CreateBr(merge_block);
 
                             m_IR_BUILDER->SetInsertPoint(next_block);
@@ -425,7 +445,7 @@ auto MorningLanguageLLVM::generate_expression(const Exp& exp, const env& env) ->
                             i += 2;
                             break;
                         } else {
-                            LOG_CRITICAL("expected maybe or else after if conditions",
+                            LOG_CRITICAL("expected elif or else after if conditions",
                                          exp.string.c_str());
                         }
                     }
@@ -455,6 +475,7 @@ auto MorningLanguageLLVM::generate_expression(const Exp& exp, const env& env) ->
 
                 // Loop
                 if (oper == "loop") {
+                    LOG_DEBUG("Process loop");
                     auto* loop_body = create_basic_block("loop.body", m_ACTIVE_FUNCTION);
                     auto* loop_exit = create_basic_block("loop.exit");
 
@@ -481,11 +502,14 @@ auto MorningLanguageLLVM::generate_expression(const Exp& exp, const env& env) ->
 
                 // Func
                 if (oper == "func") {
+                    LOG_DEBUG("Process function: %s", exp.list[1].string.c_str());
                     return compile_function(exp, /* name */ exp.list[1].string, env);
                 }
 
                 // While
                 if (oper == "while") {
+                    LOG_DEBUG("Process while loop");
+
                     auto* break_blog = create_basic_block("break");
                     auto* continue_block = create_basic_block("continue");
                     m_LOOP_STACK.push_back({break_blog, continue_block});
@@ -518,6 +542,8 @@ auto MorningLanguageLLVM::generate_expression(const Exp& exp, const env& env) ->
                 }
 
                 if (oper == "for") {
+                    LOG_DEBUG("Process for loop");
+
                     auto init = exp.list[1];
                     auto condition = exp.list[2];
                     auto step = exp.list[3];
@@ -570,6 +596,8 @@ auto MorningLanguageLLVM::generate_expression(const Exp& exp, const env& env) ->
                 }
 
                 if (oper == "break") {
+                    LOG_DEBUG("Process break");
+
                     if (m_LOOP_STACK.empty()) {
                         LOG_CRITICAL("break outside of loop", exp.string.c_str());
                     }
@@ -585,6 +613,8 @@ auto MorningLanguageLLVM::generate_expression(const Exp& exp, const env& env) ->
                 }
 
                 if (oper == "continue") {
+                    LOG_DEBUG("Process continue");
+
                     if (m_LOOP_STACK.empty()) {
                         LOG_CRITICAL("continue outside of loop", exp.string.c_str());
                     }
@@ -598,8 +628,10 @@ auto MorningLanguageLLVM::generate_expression(const Exp& exp, const env& env) ->
                     return m_IR_BUILDER->getInt64(0);
                 }
 
-                // if-then-else. Short condition without else-if blocks.
+                // if-then-else. Short condition without else-if/elif blocks.
                 if (oper == "check") {
+                    LOG_DEBUG("Process check (if-then-else)");
+
                     auto* condition = generate_expression(exp.list[1], env);
 
                     auto* then_block = create_basic_block("then", m_ACTIVE_FUNCTION);
@@ -643,6 +675,8 @@ auto MorningLanguageLLVM::generate_expression(const Exp& exp, const env& env) ->
                 }
 
                 if (oper == "set") {
+                    LOG_DEBUG("Process set value to var: %s", exp.list[1].string.c_str());
+
                     auto var_name = exp.list[1].string;
 
                     if (m_CONSTANTS.count(var_name) != 0U) {
@@ -663,6 +697,8 @@ auto MorningLanguageLLVM::generate_expression(const Exp& exp, const env& env) ->
                     auto var_name_declaration = exp.list[1];
                     auto var_name = extract_var_name(var_name_declaration);
 
+                    LOG_DEBUG("Process create %s: %s", oper.c_str(), exp.list[1].string.c_str());
+
                     auto* init = generate_expression(exp.list[2], env);
 
                     auto* var_type = extract_var_type(var_name_declaration);
@@ -677,6 +713,8 @@ auto MorningLanguageLLVM::generate_expression(const Exp& exp, const env& env) ->
                 }
 
                 if (oper == "scope") {
+                    LOG_DEBUG("Process scope");
+
                     llvm::Value* block_res = nullptr;
 
                     auto block_env =
@@ -690,6 +728,7 @@ auto MorningLanguageLLVM::generate_expression(const Exp& exp, const env& env) ->
                 }
 
                 if (oper == "fprint") {
+                    LOG_DEBUG("Process fprint");
                     auto* printf_function = m_MODULE->getFunction("printf");
                     std::vector<llvm::Value*> args {};
 
@@ -701,6 +740,8 @@ auto MorningLanguageLLVM::generate_expression(const Exp& exp, const env& env) ->
                 }
 
                 if (oper == "finput") {
+                    LOG_DEBUG("Process finput");
+
                     auto* scanf_fn = m_MODULE->getFunction("scanf");
                     std::vector<llvm::Value*> args;
 
@@ -709,8 +750,8 @@ auto MorningLanguageLLVM::generate_expression(const Exp& exp, const env& env) ->
 
                     // Variable references
                     for (size_t i = 2; i < exp.list.size(); ++i) {
-                        std::string const var_name = exp.list[i].string;
-                        llvm::Value* var_ptr = env->lookup_by_name(var_name);
+                        std::string const VAR_NAME = exp.list[i].string;
+                        llvm::Value* var_ptr = env->lookup_by_name(VAR_NAME);
                         args.push_back(var_ptr);
                     }
 
@@ -718,6 +759,8 @@ auto MorningLanguageLLVM::generate_expression(const Exp& exp, const env& env) ->
                 }
 
                 // Function calls
+
+                LOG_DEBUG("Process function call: %s", exp.list[0].string.c_str());
 
                 auto* callable = generate_expression(exp.list[0], env);
 
