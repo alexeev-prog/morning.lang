@@ -192,7 +192,7 @@ auto MorningLanguageLLVM::create_global_variable(const std::string& name, llvm::
     return variable;
 }
 
-auto MorningLanguageLLVM::get_type(const std::string& type_string) -> llvm::Type* {
+auto MorningLanguageLLVM::get_type(const std::string& type_string, const std::string& var_name) -> llvm::Type* {
     if (type_string == "!int" || type_string == "!int64") {
         return m_IR_BUILDER->getInt64Ty();
     }
@@ -225,18 +225,18 @@ auto MorningLanguageLLVM::get_type(const std::string& type_string) -> llvm::Type
         return m_IR_BUILDER->getVoidTy();
     }
 
+    LOG_WARN("Variable \"%s\" does not have typing: set by auto (!int)", var_name.c_str());
     return m_IR_BUILDER->getInt64Ty();
 }
 
 auto MorningLanguageLLVM::extract_var_type(const Exp& exp) -> llvm::Type* {
-    return exp.type == ExpType::LIST ? get_type(exp.list[1].string) : m_IR_BUILDER->getInt64Ty();
+    return exp.type == ExpType::LIST ? get_type(exp.list[1].string, exp.list[0].string) : m_IR_BUILDER->getInt64Ty();
 }
 
 auto MorningLanguageLLVM::extract_function_type(const Exp& fn_exp) -> llvm::FunctionType* {
     auto params = fn_exp.list[2];
 
-    auto* return_type =
-        has_return_type(fn_exp) ? get_type(fn_exp.list[4].string) : m_IR_BUILDER->getInt64Ty();
+    auto* return_type = has_return_type(fn_exp) ? get_type(fn_exp.list[4].string, fn_exp.list[0].string) : m_IR_BUILDER->getInt64Ty();
 
     std::vector<llvm::Type*> param_types {};
 
@@ -697,7 +697,7 @@ auto MorningLanguageLLVM::generate_expression(const Exp& exp, const env& env) ->
                     auto var_name_declaration = exp.list[1];
                     auto var_name = extract_var_name(var_name_declaration);
 
-                    LOG_DEBUG("Process create %s: %s", oper.c_str(), exp.list[1].string.c_str());
+                    LOG_DEBUG("Process create %s: %s", oper.c_str(), var_name.c_str());
 
                     auto* init = generate_expression(exp.list[2], env);
 

@@ -18,6 +18,7 @@
 [fprint "scoped_function 10: %d\n" (scoped_function 10)]
 
 [var (a !int) 10]
+[const (NAME !string) "Morning User"]
 
 [fprint "a: %d\n" a]
 
@@ -28,4 +29,5 @@
 
 [func sum ((first !int) (second !int)) -> !int (+ first second)]
 
-[fprint "sum 100 1: %d\n\n" (sum 100 1)]
+[fprint "sum 100 1: %d\n" (sum 100 1)]
+[fprint "%S\n\n" NAME]

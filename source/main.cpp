@@ -9,6 +9,8 @@
 #include <vector>
 #include <algorithm>
 
+#include "logger.hpp"
+
 namespace fs = std::filesystem;
 
 /**
@@ -31,15 +33,15 @@ namespace {
     /**
      * @brief Check is util is available (crossplatform)
      *
-     * @param compiler util name
+     * @param util util name
      * @return true
      * @return false
      **/
-    auto is_compiler_available(const std::string& compiler) -> bool {
+    auto is_util_available(const std::string& util) -> bool {
         #ifdef _WIN32
-        std::string cmd = "where " + compiler + " >nul 2>nul";
+        std::string cmd = "where " + util + " >nul 2>nul";
         #else
-        std::string cmd = "command -v " + compiler + " >/dev/null 2>&1";
+        std::string cmd = "command -v " + util + " >/dev/null 2>&1";
         #endif
         return system(cmd.c_str()) == 0;
     }
@@ -50,12 +52,20 @@ namespace {
      * @param cmd command
      * @return int
      **/
-    auto execute_command(const std::string& cmd) -> int {
-        #ifdef _WIN32
-        return system((cmd + " >nul 2>nul").c_str());
-        #else
-        return system((cmd + " >/dev/null 2>&1").c_str());
-        #endif
+    auto execute_command(const std::string& cmd, bool quiet = true) -> int {
+        if (quiet) {
+            #ifdef _WIN32
+            return system((cmd + " >nul 2>nul").c_str());
+            #else
+            return system((cmd + " >/dev/null 2>&1").c_str());
+            #endif
+        } else {
+            #ifdef _WIN32
+            return system(cmd.c_str());
+            #else
+            return system(cmd.c_str());
+            #endif
+        }
     }
 
     /**
@@ -84,39 +94,43 @@ namespace {
         const std::string opt_ll_file = output_base + "-opt.ll";
         const std::string bin_file = output_base;
 
-        // Проверка существования исходного файла
         if (!fs::exists(ll_file)) {
-            std::cerr << "Error: IR file not found: " << ll_file << "\n";
+            LOG_ERROR("IR code not found");
             return false;
         }
 
-        // Оптимизация IR
         std::string opt_cmd = "opt " + safe_path(ll_file) +
                               " -O3 -S -o " + safe_path(opt_ll_file);
 
+        LOG_INFO("Try to optimize code...");
+
         if (execute_command(opt_cmd) != 0) {
-            std::cerr << "Error: Optimization failed\n";
+            LOG_ERROR("Optimize code failed");
+            std::cout << "COMMAND " << opt_cmd << " LOG ERROR:";
+            execute_command(opt_cmd);
             return false;
         }
 
-        // Проверка результата оптимизации
         if (!fs::exists(opt_ll_file) || fs::file_size(opt_ll_file) == 0) {
-            std::cerr << "Error: Optimized IR file not created\n";
+            LOG_ERROR("Optimized IR code not created");
             return false;
         }
 
-        // Компиляция в бинарник
         std::string clang_cmd = "clang++ -O3 " + safe_path(opt_ll_file) +
                                 " -o " + safe_path(bin_file);
 
+        LOG_INFO("Try to compile optimized code...");
+
         if (execute_command(clang_cmd) != 0) {
-            std::cerr << "Error: Compilation to binary failed\n";
+            // std::cerr << "Compilation to binary failed\n";
+            LOG_ERROR("Compilation to binary failed");
+            std::cout << "COMMAND " << clang_cmd << " LOG ERROR:";
+            execute_command(clang_cmd);
             return false;
         }
 
-        // Финальная проверка результата
         if (!fs::exists(bin_file) || fs::file_size(bin_file) == 0) {
-            std::cerr << "Error: Binary file not created\n";
+            LOG_ERROR("Binary file \"%s\" not created", bin_file.c_str());
             return false;
         }
 
@@ -133,9 +147,10 @@ namespace {
             try {
                 if (fs::exists(path)) {
                     fs::remove(path);
+                    LOG_DEBUG("Remove temp file: %s", path.c_str());
                 }
             } catch (...) {
-                std::cerr << "Warning: Could not remove file: " << path << "\n";
+                LOG_WARN("Could not remove file \"%s\"", path.c_str());
             }
         };
 
@@ -149,12 +164,12 @@ namespace {
      * @return true
      * @return false
      **/
-    auto check_compilers_available() -> bool {
-        const std::vector<std::string> required_compilers = {"opt", "clang++"};
+    auto check_utils_available() -> bool {
+        const std::vector<std::string> REQUIRED_PROGS = {"opt", "clang++"};
 
-        for (const auto& compiler : required_compilers) {
-            if (!is_compiler_available(compiler)) {
-                std::cerr << "Error: Required compiler not found: " << compiler << "\n";
+        for (const auto& util : REQUIRED_PROGS) {
+            if (!is_util_available(util)) {
+                LOG_ERROR("Required util \"%s\" not found. Install yourself.", util.c_str());
                 return false;
             }
         }
@@ -171,10 +186,9 @@ namespace {
     auto is_valid_output_name(const std::string& name) -> bool {
         if (name.empty()) return false;
 
-        // Список запрещенных символов
-        const std::string forbidden_chars = "/\\:*?\"<>|";
+        const std::string FORBIDDEN_CHARS = "/\\:*?\"<>|";
         return std::none_of(name.begin(), name.end(), [&](char c) {
-            return forbidden_chars.find(c) != std::string::npos;
+            return FORBIDDEN_CHARS.find(c) != std::string::npos;
         });
     }
 }
@@ -251,6 +265,7 @@ class InputParser{
 auto main(int argc, char **argv) -> int {
     InputParser input(argc, argv);
     MorningLanguageLLVM morning_vm;
+
     std::string program;
     std::string output_base = "out";
 
@@ -259,28 +274,26 @@ auto main(int argc, char **argv) -> int {
         return 0;
     }
 
-    // Получение имени выходного файла
     if (input.cmd_option_exists("-o") || input.cmd_option_exists("--output")) {
         output_base = input.get_cmd_option("-o", "--output");
 
         if (!is_valid_output_name(output_base)) {
-            std::cerr << "Error: Invalid output name: " << output_base << "\n";
+            LOG_ERROR("Invalid output name: %s", output_base.c_str());
             return 1;
         }
     }
 
-    // Загрузка программы
     if (input.cmd_option_exists("-f") || input.cmd_option_exists("--file")) {
         const std::string FILENAME = input.get_cmd_option("-f", "--file");
 
         if (!fs::exists(FILENAME)) {
-            std::cerr << "Error: File not found: " << FILENAME << "\n";
+            LOG_ERROR("File \"%s\" not found", FILENAME.c_str());
             return 1;
         }
 
         std::ifstream program_file(FILENAME);
         if (!program_file.is_open()) {
-            std::cerr << "Error: Cannot open file: " << FILENAME << "\n";
+            LOG_ERROR("Cannot open file \"%s\"", FILENAME.c_str());
             return 1;
         }
 
@@ -289,54 +302,49 @@ auto main(int argc, char **argv) -> int {
         program = buffer.str();
 
         if (program.empty()) {
-            std::cerr << "Error: File is empty: " << FILENAME << "\n";
+            LOG_ERROR("File \"%s\" is empty", FILENAME.c_str());
             return 1;
         }
-    }
-    else if (input.cmd_option_exists("-e") || input.cmd_option_exists("--expression")) {
+    } else if (input.cmd_option_exists("-e") || input.cmd_option_exists("--expression")) {
         program = input.get_cmd_option("-e", "--expression");
 
         if (program.empty()) {
-            std::cerr << "Error: Empty expression\n";
+            LOG_ERROR("Empty expression");
             return 1;
         }
-    }
-    else {
-        std::cerr << "Error: No input specified (use -e or -f)\n";
+    } else {
+        LOG_ERROR("No input specified (use -e or -f)");
         print_help();
         return 1;
     }
 
-    // Проверка доступности компиляторов
-    if (!check_compilers_available()) {
+    if (!check_utils_available()) {
         return 1;
     }
 
-    // Генерация и компиляция
     try {
-        // Генерация IR
+        LOG_INFO("Execute program...\n");
         morning_vm.execute(program, output_base);
 
-        // Проверка сгенерированного IR
-        const std::string ll_file = output_base + ".ll";
-        if (!fs::exists(ll_file) || fs::file_size(ll_file) == 0) {
-            std::cerr << "Error: IR generation failed, no output file\n";
+        std::cout << "\n";
+
+        const std::string LL_FILE = output_base + ".ll";
+        if (!fs::exists(LL_FILE) || fs::file_size(LL_FILE) == 0) {
+            LOG_ERROR("\nIR generation failed, no output file");
             return 1;
         }
 
-        // Компиляция в бинарник
         if (!compile_ir(output_base)) {
-            std::cerr << "Compilation failed, temporary files retained for debugging\n";
+            LOG_ERROR("\nCompilation failed, temporary files retained for debugging");
             return 1;
         }
 
-        // Успешная компиляция - очистка временных файлов
         cleanup_temp_files(output_base);
 
-        std::cout << "Successfully compiled to: " << output_base << "\n";
+        LOG_INFO("Successfully compiled to %s", output_base.c_str());
     }
     catch (const std::exception& e) {
-        std::cerr << "Fatal Error: " << e.what() << "\n";
+        std::cerr << "Fatal " << e.what() << "\n";
         return 1;
     }
 

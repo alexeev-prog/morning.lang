@@ -152,7 +152,7 @@ class MorningLanguageLLVM {
      * @param type_string MorningLang type specifier (e.g., "!int")
      * @return llvm::Type* Corresponding LLVM type
      */
-    auto get_type(const std::string& type_string) -> llvm::Type*;
+    auto get_type(const std::string& type_string, const std::string& var_name) -> llvm::Type*;
 
     /**
      * @brief Extracts variable type from declaration expression

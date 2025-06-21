@@ -41,3 +41,5 @@ out.bin
 .codechecker
 report.html
 create_headers.py
+advanced
+bin/
