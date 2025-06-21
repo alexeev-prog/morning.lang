@@ -7,8 +7,8 @@
   <h3>A high-performance language combining C++ power with LLVM19 optimization</h3>
 
   <div>
-    <a href="https://alexeev-prog.github.io/morning.lang/">
-      <img src="https://img.shields.io/badge/Documentation-Online-success?style=for-the-badge&logo=gitbook" alt="Docs">
+    <a href="https://marketplace.visualstudio.com/items?itemName=alexeevdev.morning-language-syntax">
+      <img src="https://img.shields.io/badge/VSCode-extension?style=for-the-badge&logo=gitbook" alt="Docs">
     </a>
     <a href="https://github.com/alexeev-prog/morning.lang/blob/main/LICENSE">
       <img src="https://img.shields.io/badge/License-GPL_v3-blue?style=for-the-badge&logo=gnu" alt="License">
@@ -38,6 +38,11 @@
 <div align="center">
   <img src="https://raw.githubusercontent.com/alexeev-prog/morning.lang/refs/heads/main/docs/pallet-0.png" width="600" alt="Color Palette">
 </div>
+
+## VSCode Extension
+We have VS Code extension for code highlight and snippets. [Extension here](https://marketplace.visualstudio.com/items?itemName=alexeevdev.morning-language-syntax).
+
+![alt text](https://raw.githubusercontent.com/alexeev-prog/morning-vscode-ext/refs/heads/main/image.png)
 
 ## Usage
 
@@ -173,6 +178,9 @@ F --> G
 [fprint "_VERSION: %d\n\n" _VERSION] // _VERSION is reserved global var
 ```
 
+### For loops
+
+
 ### 🧩 Functions
 ```morning
 [func square (x) (* x x)]
@@ -205,12 +213,12 @@ F --> G
     (scope
         (fprint "x = %d\n" x)
         (check (== x 1)
-			[scope
-				[fprint "continue\n"]
-				[set x (+ x 1)]
-				(continue)
-				(continue)
-			]
+            [scope
+                [fprint "continue\n"]
+                [set x (+ x 1)]
+                (continue)
+                (continue)
+            ]
         )
         (set x (+ x 1))
         (check (== x 5)
@@ -225,14 +233,14 @@ F --> G
 ```morning
 [var counter 0]
 [loop
-	[scope
-	    [set counter (+ counter 1)]
-	    [fprint "Счетчик: %d\n" counter]
-	    [check (== counter 5)
-	        [break]
-	        []
-	    ]
-	]
+    [scope
+        [set counter (+ counter 1)]
+        [fprint "Счетчик: %d\n" counter]
+        [check (== counter 5)
+            [break]
+            []
+        ]
+    ]
 ]
 ```
 
@@ -258,11 +266,11 @@ F --> G
 ## 🧩 For Loop
 ```morning
 [for (var i 0) (< i 6) (set i (+ i 1))
-	[scope
-    	(fprint "Value: %d\n" i)
-    	[check (== i 3)
-			(break)
-		]
+    [scope
+        (fprint "Value: %d\n" i)
+        [check (== i 3)
+              (break)
+          ]
     ]
 ]
 ```

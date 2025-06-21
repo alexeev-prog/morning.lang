@@ -16,8 +16,6 @@
 
 [fprint "scoped_function 10: %d\n" (scoped_function 10)]
 
-func
-
 [var (a !int) 10]
 [const (NAME !string) "Morning User"]
 

@@ -1,0 +1,11 @@
+
+(var sum 0)
+(for (var i 1) (<= i 10) (set i (+ i 1))
+    (scope
+    	(fprint "Result: %d\n" i)
+        (check (>= i 5)
+            (break)
+        )
+    )
+)
+(fprint "Result: %d\n" sum)

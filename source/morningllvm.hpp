@@ -1,27 +1,24 @@
 #pragma once
 
 // LLVM Core Headers (Essential Components)
+#include <map>    ///< Standard map container
+#include <memory>    ///< Smart pointers
+#include <string>    ///< String utilities
+#include <vector>    ///< Vector container
+
 #include <llvm/IR/BasicBlock.h>    ///< Represents basic blocks of code without branches
-#include <llvm/IR/DerivedTypes.h>  ///< Contains derived LLVM type definitions
-#include <llvm/IR/Function.h>      ///< Provides function representation in LLVM IR
-#include <llvm/IR/GlobalVariable.h>///< Handles global variable declarations
-#include <llvm/IR/Instructions.h>  ///< Contains instruction definitions
-#include <llvm/IR/Value.h>         ///< Fundamental value representation in LLVM
-#include <llvm/IR/Verifier.h>      ///< Tools for IR validity checks
-#include <llvm/Support/Alignment.h>///< Alignment utilities
-#include <llvm/Support/Casting.h>  ///< Type casting support
-#include <llvm/Support/raw_ostream.h> ///< Output stream handling
+#include <llvm/IR/DerivedTypes.h>    ///< Contains derived LLVM type definitions
+#include <llvm/IR/Function.h>    ///< Provides function representation in LLVM IR
+#include <llvm/IR/GlobalVariable.h>    ///< Handles global variable declarations
+#include <llvm/IR/Instructions.h>    ///< Contains instruction definitions
+#include <llvm/IR/Value.h>    ///< Fundamental value representation in LLVM
+#include <llvm/IR/Verifier.h>    ///< Tools for IR validity checks
 
-#include "env.h"                   ///< Environment header
-#include "llvm/IR/IRBuilder.h"     ///< IR construction utilities
-#include "llvm/IR/LLVMContext.h"   ///< Context for compilation environment isolation
-#include "llvm/IR/Module.h"        ///< Container for code (similar to source file)
-#include "parser/MorningLangGrammar.h" ///< Grammar parser for MorningLang
-
-#include <map>                     ///< Standard map container
-#include <memory>                  ///< Smart pointers
-#include <string>                  ///< String utilities
-#include <vector>                  ///< Vector container
+#include "env.h"    ///< Environment header
+#include "llvm/IR/IRBuilder.h"    ///< IR construction utilities
+#include "llvm/IR/LLVMContext.h"    ///< Context for compilation environment isolation
+#include "llvm/IR/Module.h"    ///< Container for code (similar to source file)
+#include "parser/MorningLangGrammar.h"    ///< Grammar parser for MorningLang
 
 /**
  * @def GEN_BINARY_OP(Op, varName)
@@ -42,7 +39,7 @@
         return m_IR_BUILDER->Op(oper1, oper2, varName); \
     } while (false)
 
-using env = std::shared_ptr<Environment>; ///< Shared pointer to Environment
+using env = std::shared_ptr<Environment>;    ///< Shared pointer to Environment
 
 /**
  * @struct LoopBlocks
@@ -53,7 +50,7 @@ using env = std::shared_ptr<Environment>; ///< Shared pointer to Environment
  */
 struct LoopBlocks {
     llvm::BasicBlock* break_blog;    ///< Block to jump to when breaking from loop
-    llvm::BasicBlock* continue_block;///< Block to jump to when continuing loop
+    llvm::BasicBlock* continue_block;    ///< Block to jump to when continuing loop
 };
 
 /**
@@ -98,15 +95,16 @@ class MorningLanguageLLVM {
     auto execute(const std::string& program, const std::string& output_base) -> int;
 
   private:
-    llvm::Function* m_ACTIVE_FUNCTION {}; ///< Current function being generated
-    std::vector<LoopBlocks> m_LOOP_STACK; ///< Stack for nested loop management
-    std::unique_ptr<llvm::LLVMContext> m_CONTEXT; ///< LLVM context for isolation
-    std::unique_ptr<llvm::Module> m_MODULE; ///< Container for generated IR
-    std::unique_ptr<llvm::IRBuilder<>> m_IR_BUILDER; ///< Builder for IR instructions
-    std::unique_ptr<syntax::MorningLangGrammar> m_PARSER; ///< Source code parser
-    std::shared_ptr<Environment> m_GLOBAL_ENV; ///< Global symbol environment
-    std::unique_ptr<llvm::IRBuilder<>> m_VARS_BUILDER; ///< Builder for variable allocation
-    std::map<std::string, llvm::Value*> m_CONSTANTS; ///< Map of constant variables
+    llvm::Function* m_ACTIVE_FUNCTION {};    ///< Current function being generated
+    std::vector<LoopBlocks> m_LOOP_STACK;    ///< Stack for nested loop management
+    std::unique_ptr<llvm::LLVMContext> m_CONTEXT;    ///< LLVM context for isolation
+    std::unique_ptr<llvm::Module> m_MODULE;    ///< Container for generated IR
+    std::unique_ptr<llvm::IRBuilder<>> m_IR_BUILDER;    ///< Builder for IR instructions
+    std::unique_ptr<syntax::MorningLangGrammar> m_PARSER;    ///< Source code parser
+    std::shared_ptr<Environment> m_GLOBAL_ENV;    ///< Global symbol environment
+    std::unique_ptr<llvm::IRBuilder<>> m_VARS_BUILDER;    ///< Builder for variable allocation
+    std::map<std::string, llvm::Value*> m_CONSTANTS;    ///< Map of constant variables
+    std::map<std::string, llvm::Value*> m_VARIABLES;    ///< Map of variables
 
     /**
      * @brief Configures target triple for generated module

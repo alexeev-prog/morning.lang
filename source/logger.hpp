@@ -36,12 +36,12 @@ public:
 
 private:
     static constexpr size_t MAX_STACK_SIZE = 100;
-    static constexpr size_t TRACEBACK_LIMIT = 5;
+    static constexpr size_t TRACEBACK_LIMIT = 10;
     static thread_local std::vector<std::pair<std::string, std::string>> expression_stack_;
 
     // Приватный шаблонный метод
     template <typename... Args>
-    static std::string format_message(const char* format, Args... args) {
+    static auto format_message(const char* format, Args... args) -> std::string {
         int size = std::snprintf(nullptr, 0, format, args...);
         if (size < 0) return "";
 

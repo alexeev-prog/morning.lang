@@ -1,14 +1,43 @@
+#include <cstddef>
+#include <cstdint>
+#include <map>
+#include <memory>
+#include <regex>
+#include <string>
+#include <system_error>
+#include <vector>
+
 #include "morningllvm.hpp"
+
+#include <llvm/IR/BasicBlock.h>
+#include <llvm/IR/Constant.h>
+#include <llvm/IR/Constants.h>
+#include <llvm/IR/DerivedTypes.h>
+#include <llvm/IR/GlobalVariable.h>
+#include <llvm/IR/IRBuilder.h>
+#include <llvm/IR/Instructions.h>
+#include <llvm/IR/LLVMContext.h>
+#include <llvm/IR/Type.h>
+#include <llvm/IR/Value.h>
+#include <llvm/IR/Verifier.h>
+#include <llvm/Support/Alignment.h>
+#include <llvm/Support/Casting.h>
+#include <llvm/Support/raw_ostream.h>
+#include <boost/algorithm/string.hpp>
+
+#include "env.h"
 #include "logger.hpp"
+#include "parser/MorningLangGrammar.h"
+#include "tracelogger.hpp"
 
 namespace {
     /**
-    * @brief Replace regex in string
-    *
-    * @param str string for replacing text in string by regex templates
-    * @return std::string
-    **/
-    static auto replace_regex_in_string(const std::string& str) -> std::string {
+     * @brief Replace regex in string
+     *
+     * @param str string for replacing text in string by regex templates
+     * @return std::string
+     **/
+    auto replace_regex_in_string(const std::string& str) -> std::string {
         auto regex_newline = std::regex("\\\\n");
         auto regex_tab = std::regex("\\\\t");
 
@@ -19,22 +48,22 @@ namespace {
     }
 
     /**
-    * @brief Extract name from variable
-    *
-    * @param exp exp
-    * @return std::string
-    **/
-    static auto extract_var_name(const Exp& exp) -> std::string {
+     * @brief Extract name from variable
+     *
+     * @param exp exp
+     * @return std::string
+     **/
+    auto extract_var_name(const Exp& exp) -> std::string {
         return exp.type == ExpType::LIST ? exp.list[0].string : exp.string;
     }
 
     /**
-    * @brief Check if function has a return type
-    *
-    * @param fn_exp function exp
-    * @return true
-    * @return false
-    **/
+     * @brief Check if function has a return type
+     *
+     * @param fn_exp function exp
+     * @return true
+     * @return false
+     **/
     auto has_return_type(const Exp& fn_exp) -> bool {
         return fn_exp.list[3].type == ExpType::SYMBOL && fn_exp.list[3].string == "->";
     }
@@ -71,9 +100,11 @@ namespace {
                 return std::to_string(exp.number);
             case ExpType::FRACTIONAL:
                 return std::to_string(exp.fractional);
-            case ExpType::STRING:
-                return "\"" + exp.string + "\"";
-            default:
+            case ExpType::STRING: {
+                auto str1 = "\"" + exp.string + "\"";
+                boost::replace_all(str1, "\n", "\\n");
+                return str1;
+            } default:
                 return "<?>";
         }
     }
@@ -87,7 +118,11 @@ namespace {
         std::string context = "expr";
         std::string const EXPR_STR = safe_expr_to_string(exp);
 
-        if (exp.type != ExpType::NUMBER && exp.type != ExpType::SYMBOL) {
+        if (EXPR_STR == "<?>") {
+            return;
+        }
+
+        if (exp.type == ExpType::LIST || exp.type == ExpType::SYMBOL || exp.type == ExpType::NUMBER || exp.type == ExpType::FRACTIONAL || exp.type == ExpType::STRING) {
             if (exp.type == ExpType::LIST && !exp.list.empty()) {
                 if (exp.list[0].type == ExpType::SYMBOL) {
                     context = exp.list[0].string;
@@ -116,7 +151,7 @@ namespace {
 
         PUSH_EXPR_STACK(context, EXPR_STR);
     }
-}
+}    // namespace
 
 MorningLanguageLLVM::MorningLanguageLLVM()
     : m_PARSER(std::make_unique<syntax::MorningLangGrammar>()) {
@@ -164,10 +199,9 @@ void MorningLanguageLLVM::generate_ir(const Exp& ast) {
     LOG_TRACE
 
     // Create function type: i32 main()
-    auto* main_type =
-        llvm::FunctionType::get(m_IR_BUILDER->getInt64Ty(),    // Return type = 32-bit integer
-                                /* Parameters */ {},    // Empty list = no arguments
-                                /* Varargs */ false    // No "..."
+    auto* main_type = llvm::FunctionType::get(m_IR_BUILDER->getInt64Ty(),    // Return type = 32-bit integer
+                                              /* Parameters */ {},    // Empty list = no arguments
+                                              /* Varargs */ false    // No "..."
     );
 
     m_ACTIVE_FUNCTION = create_function("main", main_type, m_GLOBAL_ENV);
@@ -177,8 +211,9 @@ void MorningLanguageLLVM::generate_ir(const Exp& ast) {
     m_IR_BUILDER->CreateRet(m_IR_BUILDER->getInt64(0));
 }
 
-auto MorningLanguageLLVM::create_global_variable(const std::string& name, llvm::Constant* init_value, bool is_mutable)
-    -> llvm::GlobalVariable* {
+auto MorningLanguageLLVM::create_global_variable(const std::string& name,
+                                                 llvm::Constant* init_value,
+                                                 bool is_mutable) -> llvm::GlobalVariable* {
     LOG_TRACE
 
     m_MODULE->getOrInsertGlobal(name, init_value->getType());
@@ -192,7 +227,8 @@ auto MorningLanguageLLVM::create_global_variable(const std::string& name, llvm::
     return variable;
 }
 
-auto MorningLanguageLLVM::get_type(const std::string& type_string, const std::string& var_name) -> llvm::Type* {
+auto MorningLanguageLLVM::get_type(const std::string& type_string, const std::string& var_name)
+    -> llvm::Type* {
     if (type_string == "!int" || type_string == "!int64") {
         return m_IR_BUILDER->getInt64Ty();
     }
@@ -230,13 +266,15 @@ auto MorningLanguageLLVM::get_type(const std::string& type_string, const std::st
 }
 
 auto MorningLanguageLLVM::extract_var_type(const Exp& exp) -> llvm::Type* {
-    return exp.type == ExpType::LIST ? get_type(exp.list[1].string, exp.list[0].string) : m_IR_BUILDER->getInt64Ty();
+    return exp.type == ExpType::LIST ? get_type(exp.list[1].string, exp.list[0].string)
+                                     : m_IR_BUILDER->getInt64Ty();
 }
 
 auto MorningLanguageLLVM::extract_function_type(const Exp& fn_exp) -> llvm::FunctionType* {
     auto params = fn_exp.list[2];
 
-    auto* return_type = has_return_type(fn_exp) ? get_type(fn_exp.list[4].string, fn_exp.list[0].string) : m_IR_BUILDER->getInt64Ty();
+    auto* return_type = has_return_type(fn_exp) ? get_type(fn_exp.list[4].string, fn_exp.list[0].string)
+                                                : m_IR_BUILDER->getInt64Ty();
 
     std::vector<llvm::Type*> param_types {};
 
@@ -248,7 +286,8 @@ auto MorningLanguageLLVM::extract_function_type(const Exp& fn_exp) -> llvm::Func
     return llvm::FunctionType::get(return_type, param_types, /* varargs */ false);
 }
 
-auto MorningLanguageLLVM::alloc_var(const std::string& name, llvm::Type* var_type, const env& env) -> llvm::Value* {
+auto MorningLanguageLLVM::alloc_var(const std::string& name, llvm::Type* var_type, const env& env)
+    -> llvm::Value* {
     LOG_TRACE
 
     m_VARS_BUILDER->SetInsertPoint(&m_ACTIVE_FUNCTION->getEntryBlock());
@@ -260,7 +299,8 @@ auto MorningLanguageLLVM::alloc_var(const std::string& name, llvm::Type* var_typ
     return allocated_var;
 }
 
-auto MorningLanguageLLVM::compile_function(const Exp& fn_exp, const std::string& fn_name, const env& env) -> llvm::Value* {
+auto MorningLanguageLLVM::compile_function(const Exp& fn_exp, const std::string& fn_name, const env& env)
+    -> llvm::Value* {
     auto params = fn_exp.list[2];
     auto body = has_return_type(fn_exp) ? fn_exp.list[5] : fn_exp.list[3];
 
@@ -365,12 +405,11 @@ auto MorningLanguageLLVM::generate_expression(const Exp& exp, const env& env) ->
                 }
 
                 if (oper == "if") {
-                    LOG_DEBUG("Process if-elif-else: %s",exp.list[1].string.c_str());
+                    LOG_DEBUG("Process if-elif-else: %s", exp.list[1].string.c_str());
 
                     if (exp.list.size() < 4) {
-                        LOG_CRITICAL(
-                            "if requires at least 4 arguments: condition, block, else, else_block",
-                            exp.string.c_str());
+                        LOG_CRITICAL("if requires at least 4 arguments: condition, block, else, else_block",
+                                     exp.string.c_str());
                     }
 
                     auto* merge_block = create_basic_block("if.end");
@@ -445,8 +484,7 @@ auto MorningLanguageLLVM::generate_expression(const Exp& exp, const env& env) ->
                             i += 2;
                             break;
                         } else {
-                            LOG_CRITICAL("expected elif or else after if conditions",
-                                         exp.string.c_str());
+                            LOG_CRITICAL("expected elif or else after if conditions", exp.string.c_str());
                         }
                     }
 
@@ -457,13 +495,11 @@ auto MorningLanguageLLVM::generate_expression(const Exp& exp, const env& env) ->
                         auto* first_type = branch_values[0]->getType();
                         for (auto* val : branch_values) {
                             if (val->getType() != first_type) {
-                                LOG_CRITICAL("if: all branches must return same type",
-                                             exp.string.c_str());
+                                LOG_CRITICAL("if: all branches must return same type", exp.string.c_str());
                             }
                         }
 
-                        auto* phi =
-                            m_IR_BUILDER->CreatePHI(first_type, branch_values.size(), "if_result");
+                        auto* phi = m_IR_BUILDER->CreatePHI(first_type, branch_values.size(), "if_result");
                         for (size_t idx = 0; idx < branch_values.size(); idx++) {
                             phi->addIncoming(branch_values[idx], branch_blocks[idx]);
                         }
@@ -482,8 +518,8 @@ auto MorningLanguageLLVM::generate_expression(const Exp& exp, const env& env) ->
                     m_IR_BUILDER->CreateBr(loop_body);
                     m_IR_BUILDER->SetInsertPoint(loop_body);
 
-                    LoopBlocks const loop_blocks = {loop_exit, loop_body};
-                    m_LOOP_STACK.push_back(loop_blocks);
+                    LoopBlocks const LOOP_BLOCKS = {loop_exit, loop_body};
+                    m_LOOP_STACK.push_back(LOOP_BLOCKS);
 
                     for (size_t i = 1; i < exp.list.size(); i++) {
                         generate_expression(exp.list[i], env);
@@ -550,8 +586,7 @@ auto MorningLanguageLLVM::generate_expression(const Exp& exp, const env& env) ->
                     auto body = exp.list[4];
 
                     // `for` environment
-                    auto for_env =
-                        std::make_shared<Environment>(std::map<std::string, llvm::Value*>(), env);
+                    auto for_env = std::make_shared<Environment>(std::map<std::string, llvm::Value*>(), env);
 
                     // Generate init expression
                     generate_expression(init, for_env);
@@ -662,8 +697,7 @@ auto MorningLanguageLLVM::generate_expression(const Exp& exp, const env& env) ->
                     m_ACTIVE_FUNCTION->insert(m_ACTIVE_FUNCTION->end(), if_end_block);
                     m_IR_BUILDER->SetInsertPoint(if_end_block);
 
-                    if ((then_block->getTerminator() == nullptr)
-                        && (else_block->getTerminator() == nullptr))
+                    if ((then_block->getTerminator() == nullptr) && (else_block->getTerminator() == nullptr))
                     {
                         auto* phi = m_IR_BUILDER->CreatePHI(then_res->getType(), 2, "__tmpcheck__");
                         phi->addIncoming(then_res, then_block);
@@ -697,6 +731,11 @@ auto MorningLanguageLLVM::generate_expression(const Exp& exp, const env& env) ->
                     auto var_name_declaration = exp.list[1];
                     auto var_name = extract_var_name(var_name_declaration);
 
+                    if (m_CONSTANTS.count(var_name) != 0U || m_VARIABLES.count(var_name) != 0U) {
+                        LOG_CRITICAL("Var \"%s\" is already defined", var_name.c_str());
+                        return m_IR_BUILDER->getInt64(0);
+                    }
+
                     LOG_DEBUG("Process create %s: %s", oper.c_str(), var_name.c_str());
 
                     auto* init = generate_expression(exp.list[2], env);
@@ -707,6 +746,8 @@ auto MorningLanguageLLVM::generate_expression(const Exp& exp, const env& env) ->
 
                     if (oper == "const") {
                         m_CONSTANTS[var_name] = var_binding;
+                    } else {
+                        m_VARIABLES[var_name] = var_binding;
                     }
 
                     return m_IR_BUILDER->CreateStore(init, var_binding);
@@ -812,8 +853,9 @@ auto MorningLanguageLLVM::create_function(const std::string& name, llvm::Functio
     return func;
 }
 
-auto MorningLanguageLLVM::create_function_prototype(const std::string& name, llvm::FunctionType* type, const env& env)
-    -> llvm::Function* {
+auto MorningLanguageLLVM::create_function_prototype(const std::string& name,
+                                                    llvm::FunctionType* type,
+                                                    const env& env) -> llvm::Function* {
     LOG_TRACE
 
     auto* func = llvm::Function::Create(type,
@@ -835,7 +877,8 @@ void MorningLanguageLLVM::setup_function_body(llvm::Function* func) {
     m_IR_BUILDER->SetInsertPoint(entry_block);    // "Start writing here"
 }
 
-auto MorningLanguageLLVM::create_basic_block(const std::string& label, llvm::Function* parent) -> llvm::BasicBlock* {
+auto MorningLanguageLLVM::create_basic_block(const std::string& label, llvm::Function* parent)
+    -> llvm::BasicBlock* {
     LOG_TRACE
 
     return llvm::BasicBlock::Create(*m_CONTEXT, label, parent);
