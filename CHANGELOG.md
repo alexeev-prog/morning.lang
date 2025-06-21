@@ -1,3 +1,9 @@
+commit 0aa0a9ce651c9d2427d93a441c8641752c27759e
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Sun Jun 22 04:50:06 2025 +0700
+
+    fix/docs: fix codestyle, improve expression stack, improve docs
+
 commit 807d291078c627ba0c9f7e546551dccfb5a4fe4c
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Sat Jun 21 23:25:39 2025 +0700

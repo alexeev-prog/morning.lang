@@ -47,6 +47,59 @@ namespace {
         return tabed;
     }
 
+    auto typeToString(llvm::Type* type) -> std::string {
+        std::string typeStr;
+
+        llvm::raw_string_ostream rso(typeStr);
+
+        type->print(rso);
+
+        auto value = rso.str();
+
+        if (value == "i64") {
+            return "!int64";
+        }
+        if (value == "i32") {
+            return "!int64";
+        }
+        if (value == "i16") {
+            return "!int64";
+        }
+        if (value == "i8") {
+            return "!int64";
+        }
+        if (value == "ptr") {
+            return "!str";
+        }
+        if (value == "double") {
+            return "!frac";
+        }
+
+        return value;
+    }
+
+    /**
+     * @brief Perform implicit type conversion (int -> frac)
+     *
+     * @param value Value to convert
+     * @param targetType Target type
+     * @param builder IR builder
+     * @return llvm::Value* Converted value or original if no conversion needed
+     */
+    auto implicit_cast(llvm::Value* value, llvm::Type* targetType, llvm::IRBuilder<>& builder) -> llvm::Value* {
+        if (value->getType() == targetType) {
+            return value;
+        }
+
+        // int -> frac (double)
+        if (value->getType()->isIntegerTy() && targetType->isDoubleTy()) {
+            return builder.CreateSIToFP(value, targetType, "castinttofrac");
+        }
+
+        // For other types, return original (will throw error later)
+        return value;
+    }
+
     /**
      * @brief Extract name from variable
      *
@@ -382,6 +435,36 @@ auto MorningLanguageLLVM::generate_expression(const Exp& exp, const env& env) ->
             if (tag.type == ExpType::SYMBOL) {
                 auto oper = tag.string;
 
+                if (oper == "+" || oper == "-" || oper == "*" || oper == "/") {
+                    auto left = generate_expression(exp.list[1], env);
+                    auto right = generate_expression(exp.list[2], env);
+
+                    // Determine common type
+                    llvm::Type* targetType = left->getType();
+                    if (left->getType()->isIntegerTy() && right->getType()->isDoubleTy()) {
+                        targetType = right->getType();
+                    } else if (left->getType()->isDoubleTy() && right->getType()->isIntegerTy()) {
+                        targetType = left->getType();
+                    }
+
+                    // Apply implicit casting
+                    left = implicit_cast(left, targetType, *m_IR_BUILDER);
+                    right = implicit_cast(right, targetType, *m_IR_BUILDER);
+
+                    // Generate operations
+                    if (targetType->isDoubleTy()) {
+                        if (oper == "+") return m_IR_BUILDER->CreateFAdd(left, right, "__tmpfadd__");
+                        if (oper == "-") return m_IR_BUILDER->CreateFSub(left, right, "__tmpfsub__");
+                        if (oper == "*") return m_IR_BUILDER->CreateFMul(left, right, "__tmpfmul__");
+                        if (oper == "/") return m_IR_BUILDER->CreateFDiv(left, right, "__tmpfdiv__");
+                    } else {
+                        if (oper == "+") return m_IR_BUILDER->CreateAdd(left, right, "__tmpadd__");
+                        if (oper == "-") return m_IR_BUILDER->CreateSub(left, right, "__tmpsub__");
+                        if (oper == "*") return m_IR_BUILDER->CreateMul(left, right, "__tmpmul__");
+                        if (oper == "/") return m_IR_BUILDER->CreateSDiv(left, right, "__tmpdiv__");
+                    }
+                }
+
                 if (oper == "+" || oper == "__PLUS_OPERAND__") {
                     GEN_BINARY_OP(CreateAdd, "__tmpadd__");
                 } else if (oper == "-" || oper == "__SUB_OPERAND__") {
@@ -709,9 +792,9 @@ auto MorningLanguageLLVM::generate_expression(const Exp& exp, const env& env) ->
                 }
 
                 if (oper == "set") {
-                    LOG_DEBUG("Process set value to var: %s", exp.list[1].string.c_str());
-
                     auto var_name = exp.list[1].string;
+
+                    LOG_DEBUG("Process set value to var: %s", var_name.c_str());
 
                     if (m_CONSTANTS.count(var_name) != 0U) {
                         LOG_CRITICAL("Var name \"%s\" is constant", var_name.c_str());
@@ -719,8 +802,30 @@ auto MorningLanguageLLVM::generate_expression(const Exp& exp, const env& env) ->
                     }
 
                     auto* value = generate_expression(exp.list[2], env);
-
                     auto* var_binding = env->lookup_by_name(var_name);
+
+                    // Get actual variable type
+                    llvm::Type* var_type = nullptr;
+                    if (auto* alloca = llvm::dyn_cast<llvm::AllocaInst>(var_binding)) {
+                        var_type = alloca->getAllocatedType();
+                    }
+                    else if (auto* global = llvm::dyn_cast<llvm::GlobalVariable>(var_binding)) {
+                        var_type = global->getValueType();
+                    }
+
+                    // Validate type
+                    if (value->getType() != var_type) {
+                        // Allow implicit int->frac conversion
+                        if (value->getType()->isIntegerTy() && var_type->isDoubleTy()) {
+                            value = m_IR_BUILDER->CreateSIToFP(value, var_type, "castset");
+                        }
+                        else {
+                            LOG_CRITICAL("Type mismatch for '%s': cannot assign %s to %s",
+                                var_name.c_str(),
+                                typeToString(value->getType()).c_str(),
+                                typeToString(var_type).c_str());
+                        }
+                    }
 
                     m_IR_BUILDER->CreateStore(value, var_binding);
 
@@ -739,8 +844,21 @@ auto MorningLanguageLLVM::generate_expression(const Exp& exp, const env& env) ->
                     LOG_DEBUG("Process create %s: %s", oper.c_str(), var_name.c_str());
 
                     auto* init = generate_expression(exp.list[2], env);
-
                     auto* var_type = extract_var_type(var_name_declaration);
+
+                    // Validate type
+                    if (init->getType() != var_type) {
+                        // Allow implicit int->frac conversion
+                        if (init->getType()->isIntegerTy() && var_type->isDoubleTy()) {
+                            init = m_IR_BUILDER->CreateSIToFP(init, var_type, "castinit");
+                        }
+                        else {
+                            LOG_CRITICAL("Type mismatch for '%s': declared as %s but initialized with %s",
+                                var_name.c_str(),
+                                typeToString(var_type).c_str(),
+                                typeToString(init->getType()).c_str());
+                        }
+                    }
 
                     auto* var_binding = alloc_var(var_name, var_type, env);
 

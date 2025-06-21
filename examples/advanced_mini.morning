@@ -14,12 +14,11 @@
 [fprint "square 012: %d\n" (square 012)]
 [fprint "square 0b1010: %d\n" (square 0b1010)]
 
-[fprint "scoped_function 10: %d\n" (scoped_function 10)]
-
-func
+[fprint "\nscoped_function 10: %d\n" (scoped_function 10)]
 
 [var (a !int) 10]
-[const (NAME !string) "Morning User"]
+[const (NAME !str) "Morning User"]
+[fprint "NAME: %s" NAME]
 
 [fprint "a: %d\n" a]
 
