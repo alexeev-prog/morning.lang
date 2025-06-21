@@ -1,37 +1,40 @@
 #pragma once
 
 // LLVM Core Headers (Essential Components)
-#include <llvm/IR/BasicBlock.h>    // Code blocks without branches
-#include <llvm/IR/DerivedTypes.h>
-#include <llvm/IR/Function.h>    // Function representation
-#include <llvm/IR/GlobalVariable.h>
-#include <llvm/IR/Instructions.h>
-#include <llvm/IR/Value.h>
-#include <llvm/IR/Verifier.h>    // IR validity checks
-#include <llvm/Support/Alignment.h>
-#include <llvm/Support/Casting.h>
-#include <llvm/Support/raw_ostream.h>    // Output handling
+#include <llvm/IR/BasicBlock.h>    ///< Represents basic blocks of code without branches
+#include <llvm/IR/DerivedTypes.h>  ///< Contains derived LLVM type definitions
+#include <llvm/IR/Function.h>      ///< Provides function representation in LLVM IR
+#include <llvm/IR/GlobalVariable.h>///< Handles global variable declarations
+#include <llvm/IR/Instructions.h>  ///< Contains instruction definitions
+#include <llvm/IR/Value.h>         ///< Fundamental value representation in LLVM
+#include <llvm/IR/Verifier.h>      ///< Tools for IR validity checks
+#include <llvm/Support/Alignment.h>///< Alignment utilities
+#include <llvm/Support/Casting.h>  ///< Type casting support
+#include <llvm/Support/raw_ostream.h> ///< Output stream handling
 
-#include "env.h"
-#include "llvm/IR/Constants.h"
-#include "llvm/IR/IRBuilder.h"    // Intermediate Representation (IR) construction
-#include "llvm/IR/LLVMContext.h"    // Compilation environment isolation
-#include "llvm/IR/Module.h"    // Code container (like a source file)
-#include "logger.hpp"
-#include "parser/MorningLangGrammar.h"    // Grammatic Parser
-#include "tracelogger.hpp"
+#include "env.h"                   ///< Environment header
+#include "llvm/IR/IRBuilder.h"     ///< IR construction utilities
+#include "llvm/IR/LLVMContext.h"   ///< Context for compilation environment isolation
+#include "llvm/IR/Module.h"        ///< Container for code (similar to source file)
+#include "parser/MorningLangGrammar.h" ///< Grammar parser for MorningLang
 
-// Standard libraries
-#include <cstddef>
-#include <cstdint>
-#include <map>
-#include <memory>    // Smart pointers
-#include <regex>    // Use regex expressions
-#include <string>    // String handling
-#include <system_error>    // Use system errors (providers error code)
-#include <utility>
-#include <vector>    // Use vectors
+#include <map>                     ///< Standard map container
+#include <memory>                  ///< Smart pointers
+#include <string>                  ///< String utilities
+#include <vector>                  ///< Vector container
 
+/**
+ * @def GEN_BINARY_OP(Op, varName)
+ * @brief Macro to generate binary operation IR instructions
+ *
+ * This macro generates LLVM IR for binary operations by:
+ * 1. Evaluating the first operand from expression list index 1
+ * 2. Evaluating the second operand from expression list index 2
+ * 3. Creating the specified binary operation with the given variable name
+ *
+ * @param Op The LLVM IRBuilder operation method (e.g., CreateAdd)
+ * @param varName Temporary variable name for the result
+ */
 #define GEN_BINARY_OP(Op, varName) \
     do { \
         auto oper1 = generate_expression(exp.list[1], env); \
@@ -39,1065 +42,236 @@
         return m_IR_BUILDER->Op(oper1, oper2, varName); \
     } while (false)
 
-using env = std::shared_ptr<Environment>;
+using env = std::shared_ptr<Environment>; ///< Shared pointer to Environment
 
 /**
- * @brief Replace regex in string
+ * @struct LoopBlocks
+ * @brief Structure to manage loop control flow blocks
  *
- * @param str string for replacing text in string by regex templates
- * @return std::string
- **/
-inline auto replace_regex_in_string(const std::string& str) -> std::string {
-    LOG_TRACE
-
-    auto regex_newline = std::regex("\\\\n");
-    auto regex_tab = std::regex("\\\\t");
-
-    auto newlined = std::regex_replace(str, regex_newline, "\n");
-    auto tabed = std::regex_replace(newlined, regex_tab, "\t");
-
-    return tabed;
-}
-
-/**
- * @brief Extract name from variable
- *
- * @param exp exp
- * @return std::string
- **/
-inline auto extract_var_name(const Exp& exp) -> std::string {
-    return exp.type == ExpType::LIST ? exp.list[0].string : exp.string;
-}
-
-/**
- * @brief Check if function has a return type
- *
- * @param fn_exp function exp
- * @return true
- * @return false
- **/
-inline auto has_return_type(const Exp& fn_exp) -> bool {
-    return fn_exp.list[3].type == ExpType::SYMBOL && fn_exp.list[3].string == "->";
-}
-
-static auto safe_expr_to_string(const Exp& exp) -> std::string {
-    switch (exp.type) {
-        case ExpType::LIST: {
-            if (exp.list.empty()) {
-                return "[]";
-            }
-
-            std::string s = "[";
-            for (const auto& e : exp.list) {
-                s += safe_expr_to_string(e) + " ";
-            }
-            s.pop_back();    // Remove last space
-            s += "]";
-
-            // Trim long expressions
-            if (s.length() > 120) {
-                return s.substr(0, 117) + "...";
-            }
-            return s;
-        }
-        case ExpType::SYMBOL:
-            return exp.string;
-        case ExpType::NUMBER:
-            return std::to_string(exp.number);
-        case ExpType::FRACTIONAL:
-            return std::to_string(exp.fractional);
-        case ExpType::STRING:
-            return "\"" + exp.string + "\"";
-        default:
-            return "<?>";
-    }
-}
-
-/**
- * @brief Loop blocks structure
- *
- **/
+ * Contains basic blocks for loop break and continue points,
+ * enabling proper control flow management during loop generation
+ */
 struct LoopBlocks {
-    llvm::BasicBlock* break_blog;
-    llvm::BasicBlock* continue_block;
+    llvm::BasicBlock* break_blog;    ///< Block to jump to when breaking from loop
+    llvm::BasicBlock* continue_block;///< Block to jump to when continuing loop
 };
 
 /**
  * @class MorningLanguageLLVM
- * @brief Converts MorningLang code to LLVM IR (Intermediate Representation)
+ * @brief Converts MorningLang source code to LLVM Intermediate Representation (IR)
  *
- * Think of this as a translator that takes your code and converts it
- * into LLVM's assembly-like format, which can then be compiled to
- * machine code for any CPU.
+ * This class acts as a compiler frontend that:
+ * 1. Parses MorningLang source code
+ * 2. Generates LLVM IR
+ * 3. Manages compilation context and environment
+ * 4. Handles control flow structures and variable scoping
+ *
+ * It creates a complete LLVM Module containing functions, global variables,
+ * and executable instructions that can be compiled to machine code.
  */
 class MorningLanguageLLVM {
   public:
     /**
-     * @brief Sets up the LLVM "workspace"
+     * @brief Constructs and initializes the LLVM compilation environment
      *
-     * When creating a compiler, we need:
-     * 1. A workspace (Context) to keep track of types and numbers
-     * 2. A notebook (Module) to write our code in
-     * 3. A pen (IRBuilder) to write instructions
+     * Performs critical initialization steps:
+     * 1. Creates LLVM context and module
+     * 2. Initializes IR builders
+     * 3. Sets up global environment
+     * 4. Registers external functions
      */
-    MorningLanguageLLVM()
-        : m_PARSER(std::make_unique<syntax::MorningLangGrammar>()) {
-        LOG_TRACE
-
-        initialize_module();
-        setup_triple();
-        setup_extern_functions();
-        setup_global_environment();
-    }
+    MorningLanguageLLVM();
 
     /**
-     * @brief Main compilation process
-     * @param program Your source code (currently unused placeholder)
+     * @brief Executes the full compilation pipeline
      *
-     * Compilation steps:
-     * 1. Generate IR structure (like building a skeleton)
-     * 2. Print IR to console for debugging
-     * 3. Save IR to file for later use
+     * Processes source code through:
+     * 1. Parsing to Abstract Syntax Tree (AST)
+     * 2. IR generation from AST
+     * 3. Module verification
+     * 4. Output to file
+     *
+     * @param program MorningLang source code string
+     * @param output_base Base filename for output files (without extension)
+     * @return int Status code (0 = success)
      */
-    auto execute(const std::string& program, const std::string& output_base) -> int {
-        LOG_TRACE
-
-        auto ast = m_PARSER->parse("[scope " + program + "]");
-        generate_ir(ast);
-
-        llvm::verifyModule(*m_MODULE, &llvm::errs());
-        save_module_to_file(output_base + ".ll");
-
-        return 0;
-    }
+    auto execute(const std::string& program, const std::string& output_base) -> int;
 
   private:
-    /// @activeFunction: The function we're currently building (like a work-in-progress)
-    llvm::Function* m_ACTIVE_FUNCTION {};
+    llvm::Function* m_ACTIVE_FUNCTION {}; ///< Current function being generated
+    std::vector<LoopBlocks> m_LOOP_STACK; ///< Stack for nested loop management
+    std::unique_ptr<llvm::LLVMContext> m_CONTEXT; ///< LLVM context for isolation
+    std::unique_ptr<llvm::Module> m_MODULE; ///< Container for generated IR
+    std::unique_ptr<llvm::IRBuilder<>> m_IR_BUILDER; ///< Builder for IR instructions
+    std::unique_ptr<syntax::MorningLangGrammar> m_PARSER; ///< Source code parser
+    std::shared_ptr<Environment> m_GLOBAL_ENV; ///< Global symbol environment
+    std::unique_ptr<llvm::IRBuilder<>> m_VARS_BUILDER; ///< Builder for variable allocation
+    std::map<std::string, llvm::Value*> m_CONSTANTS; ///< Map of constant variables
 
     /**
-     * @brief Vector with loop blocks
+     * @brief Configures target triple for generated module
      *
-     **/
-    std::vector<LoopBlocks> m_LOOP_STACK;
-
-    /**
-     * @brief context: LLVM's isolated workspace
-     *
-     * Why needed? Prevents mixups if multiple compilations happen at once.
-     * Contains:
-     * - All type definitions (like int32)
-     * - Constant values (like numbers)
-     * - Special rules for the target CPU
+     * Sets architecture-specific information (default: x86_64-unknown-linux-gnu)
      */
-    std::unique_ptr<llvm::LLVMContext> m_CONTEXT;
+    void setup_triple();
 
     /**
-     * @brief module: Container for all generated code
+     * @brief Initializes global environment with predefined variables
      *
-     * Imagine this as a source file that holds:
-     * - Functions (your code)
-     * - Global variables (world-accessible data)
-     * - Metadata (debugging info, optimization hints)
+     * Creates global variables like _VERSION and registers them
+     * in the global environment
      */
-    std::unique_ptr<llvm::Module> m_MODULE;
+    void setup_global_environment();
 
     /**
-     * @brief irBuilder: Tool for writing LLVM instructions
+     * @brief Generates IR from Abstract Syntax Tree
      *
-     * How it works:
-     * 1. You tell it where to write (current position)
-     * 2. You call methods like CreateAdd/CreateRet
-     * 3. It writes instructions in SSA form (every value unique)
+     * Recursively traverses AST to generate corresponding LLVM IR:
+     * 1. Creates main function
+     * 2. Processes expressions
+     * 3. Handles control flow
+     *
+     * @param ast Root of the Abstract Syntax Tree
      */
-    std::unique_ptr<llvm::IRBuilder<>> m_IR_BUILDER;
+    void generate_ir(const Exp& ast);
 
     /**
-     * @brief Morning language parser
+     * @brief Creates a global variable in the module
      *
-     * This is Morning Language Syntax Parser
-     **/
-    std::unique_ptr<syntax::MorningLangGrammar> m_PARSER;
-
-    /**
-     * @brief Global Environment
-     *
-     * This is global program environment
-     **/
-    std::shared_ptr<Environment> m_GLOBAL_ENV;
-
-    /**
-     * @brief IR Builder for vars
-     *
-     * Tool for writing LLVM Vars instructions
-     **/
-    std::unique_ptr<llvm::IRBuilder<>> m_VARS_BUILDER;
-
-    /**
-     * @brief Constants map
-     *
-     **/
-    std::map<std::string, llvm::Value*> m_CONSTANTS;
-
-    /**
-     * @brief Set the up triple object
-     *
-     **/
-    void setup_triple() { m_MODULE->setTargetTriple("x86_64-unknown-linux-gnu"); }
-
-    /**
-     * @brief Set the up global environment
-     **/
-    void setup_global_environment() {
-        LOG_TRACE
-
-        std::map<std::string, llvm::Value*> const GLOBAL_OBJECT {
-            {"_VERSION", m_IR_BUILDER->getInt64(300)},
-        };
-
-        std::map<std::string, llvm::Value*> global_rec {};
-
-        for (const auto& entry : GLOBAL_OBJECT) {
-            global_rec[entry.first] = create_global_variable(entry.first, (llvm::Constant*)entry.second);
-        }
-
-        m_GLOBAL_ENV = std::make_shared<Environment>(global_rec, nullptr);
-    }
-
-    /**
-     * @brief Builds the LLVM IR structure
-     *
-     * Current simple implementation:
-     * 1. Create main() function shell
-     * 2. Generate return value (hardcoded 42)
-     * 3. Insert return instruction
+     * @param name Variable name
+     * @param init_value Initial constant value
+     * @param is_mutable Flag for mutable variables (default=false)
+     * @return llvm::GlobalVariable* Pointer to created global variable
      */
-    void generate_ir(const Exp& ast) {
-        LOG_TRACE
-
-        // Create function type: i32 main()
-        auto* main_type =
-            llvm::FunctionType::get(m_IR_BUILDER->getInt64Ty(),    // Return type = 32-bit integer
-                                    /* Parameters */ {},    // Empty list = no arguments
-                                    /* Varargs */ false    // No "..."
-            );
-
-        m_ACTIVE_FUNCTION = create_function("main", main_type, m_GLOBAL_ENV);
-
-        generate_expression(ast, m_GLOBAL_ENV);
-
-        m_IR_BUILDER->CreateRet(m_IR_BUILDER->getInt64(0));
-    }
-
-    /**
-     * @brief Create a global variable object
-     *
-     * Global variables allocated outside of any function, stored in the binary file mutable, but can have
-     * only constant initializers.
-     *
-     * @param name variable name
-     * @param init_value initializer of variable
-     * @return llvm::GlobalVariable*
-     **/
     auto create_global_variable(const std::string& name, llvm::Constant* init_value, bool is_mutable = false)
-        -> llvm::GlobalVariable* {
-        LOG_TRACE
-
-        m_MODULE->getOrInsertGlobal(name, init_value->getType());
-
-        auto* variable = m_MODULE->getNamedGlobal(name);
-
-        variable->setAlignment(llvm::MaybeAlign(4));
-        variable->setConstant(!is_mutable);
-        variable->setInitializer(init_value);
-
-        return variable;
-    }
+        -> llvm::GlobalVariable*;
 
     /**
-     * @brief Get the type by name
+     * @brief Maps type strings to LLVM types
      *
-     * `!int`; `!int64` - 64bit integer
-     * `!int32` - 32bit integer
-     * `!int16` - 16bit integer
-     * `!int8` - 8bit integer
-     * `!str` - string
-     * `!frac` - fractional (double) number
-     * `!bool` - basic integer
-     * `!none` - void, none
-     * Otherwise: 64bit integer
-     *
-     * @param type_string
-     * @return llvm::Type*
-     **/
-    auto get_type(const std::string& type_string) -> llvm::Type* {
-        if (type_string == "!int" || type_string == "!int64") {
-            return m_IR_BUILDER->getInt64Ty();
-        }
-
-        if (type_string == "!int32") {
-            return m_IR_BUILDER->getInt32Ty();
-        }
-
-        if (type_string == "!int16") {
-            return m_IR_BUILDER->getInt16Ty();
-        }
-
-        if (type_string == "!int8") {
-            return m_IR_BUILDER->getInt8Ty();
-        }
-
-        if (type_string == "!str") {
-            return m_IR_BUILDER->getInt8Ty()->getPointerTo();
-        }
-
-        if (type_string == "!frac") {
-            return m_IR_BUILDER->getDoubleTy();
-        }
-
-        if (type_string == "!bool") {
-            return m_IR_BUILDER->getInt64Ty();
-        }
-
-        if (type_string == "!none") {
-            return m_IR_BUILDER->getVoidTy();
-        }
-
-        return m_IR_BUILDER->getInt64Ty();
-    }
-
-    /**
-     * @brief Extract var type
-     *
-     * @param exp exp token
-     * @return llvm::Type* var type
-     **/
-    auto extract_var_type(const Exp& exp) -> llvm::Type* {
-        return exp.type == ExpType::LIST ? get_type(exp.list[1].string) : m_IR_BUILDER->getInt64Ty();
-    }
-
-    /**
-     * @brief Extract function type
-     *
-     * @param fn_exp function exp
-     * @return llvm::FunctionType*
-     **/
-    auto extract_function_type(const Exp& fn_exp) -> llvm::FunctionType* {
-        auto params = fn_exp.list[2];
-
-        auto* return_type =
-            has_return_type(fn_exp) ? get_type(fn_exp.list[4].string) : m_IR_BUILDER->getInt64Ty();
-
-        std::vector<llvm::Type*> param_types {};
-
-        for (auto& param : params.list) {
-            auto* param_type = extract_var_type(param);
-            param_types.push_back(param_type);
-        }
-
-        return llvm::FunctionType::get(return_type, param_types, /* varargs */ false);
-    }
-
-    /**
-     * @brief Allocate a variable
-     *
-     * @param name variable name
-     * @param var_type variable type
-     * @param env variables environment
-     * @return llvm::Value* allocated var
-     **/
-    auto alloc_var(const std::string& name, llvm::Type* var_type, const env& env) -> llvm::Value* {
-        LOG_TRACE
-
-        m_VARS_BUILDER->SetInsertPoint(&m_ACTIVE_FUNCTION->getEntryBlock());
-
-        auto* allocated_var = m_VARS_BUILDER->CreateAlloca(var_type, nullptr, name);
-
-        env->define(name, allocated_var);
-
-        return allocated_var;
-    }
-
-    /**
-     * @brief Build function environment and compile function block
-     *
-     * @param fn_exp function exp
-     * @param fn_name function name
-     * @param env parent environment
-     * @return llvm::Value*
-     **/
-    auto compile_function(const Exp& fn_exp, const std::string& fn_name, const env& env) -> llvm::Value* {
-        auto params = fn_exp.list[2];
-        auto body = has_return_type(fn_exp) ? fn_exp.list[5] : fn_exp.list[3];
-
-        auto* prev_fn = m_ACTIVE_FUNCTION;
-        auto* prev_block = m_IR_BUILDER->GetInsertBlock();
-
-        auto* new_fn = create_function(fn_name, extract_function_type(fn_exp), env);
-        m_ACTIVE_FUNCTION = new_fn;
-
-        auto idx = 0;
-
-        auto fn_env = std::make_shared<Environment>(std::map<std::string, llvm::Value*> {}, env);
-
-        for (auto& arg : m_ACTIVE_FUNCTION->args()) {
-            auto param = params.list[idx++];
-            auto arg_name = extract_var_name(param);
-
-            arg.setName(arg_name);
-
-            auto* arg_binding = alloc_var(arg_name, arg.getType(), fn_env);
-            m_IR_BUILDER->CreateStore(&arg, arg_binding);
-        }
-
-        m_IR_BUILDER->CreateRet(generate_expression(body, fn_env));
-
-        m_IR_BUILDER->SetInsertPoint(prev_block);
-        m_ACTIVE_FUNCTION = prev_fn;
-
-        return new_fn;
-    }
-
-    /**
-     * @brief Generates value from expression (currently simple number)
-     * @return LLVM value representing computed result
-     *
-     * LLVM uses SSA (Static Single Assignment):
-     * - Every value is created once
-     * - Values are immutable (can't change)
-     * - %1 = add i32 %0, 1 (typical SSA form)
+     * @param type_string MorningLang type specifier (e.g., "!int")
+     * @return llvm::Type* Corresponding LLVM type
      */
-    auto generate_expression(const Exp& exp, const env& env) -> llvm::Value* {
-        LOG_TRACE
-
-        std::string context = "expr";
-        std::string const expr_str = safe_expr_to_string(exp);
-
-        if (exp.type != ExpType::NUMBER && exp.type != ExpType::SYMBOL) {
-            if (exp.type == ExpType::LIST && !exp.list.empty()) {
-                if (exp.list[0].type == ExpType::SYMBOL) {
-                    context = exp.list[0].string;
-                } else {
-                    context = "list";
-                }
-            } else {
-                switch (exp.type) {
-                    case ExpType::SYMBOL:
-                        context = "symbol";
-                        break;
-                    case ExpType::NUMBER:
-                        context = "number";
-                        break;
-                    case ExpType::FRACTIONAL:
-                        context = "fractional";
-                        break;
-                    case ExpType::STRING:
-                        context = "string";
-                        break;
-                    default:
-                        context = "value";
-                }
-            }
-        }
-
-        PUSH_EXPR_STACK(context, expr_str);
-
-        switch (exp.type) {
-            case ExpType::NUMBER:
-                return m_IR_BUILDER->getInt64(exp.number);
-            case ExpType::FRACTIONAL:
-                return llvm::ConstantFP::get(m_IR_BUILDER->getDoubleTy(), exp.fractional);
-            case ExpType::STRING: {
-                auto str = replace_regex_in_string(exp.string);
-
-                return m_IR_BUILDER->CreateGlobalStringPtr(str);
-            }
-            case ExpType::SYMBOL:
-                if (exp.string == "true" || exp.string == "false") {
-                    return m_IR_BUILDER->getInt64(static_cast<uint64_t>(exp.string == "true"));
-                } else {
-                    auto var_name = exp.string;
-                    auto* value = env->lookup_by_name(var_name);
-
-                    if (auto* local_var = llvm::dyn_cast<llvm::AllocaInst>(value)) {
-                        return m_IR_BUILDER->CreateLoad(
-                            local_var->getAllocatedType(), local_var, var_name.c_str());
-                    }
-
-                    if (auto* global_var = llvm::dyn_cast<llvm::GlobalVariable>(value)) {
-                        return m_IR_BUILDER->CreateLoad(
-                            global_var->getInitializer()->getType(), global_var, var_name.c_str());
-                    }
-
-                    return value;
-                }
-                return m_MODULE->getNamedGlobal(exp.string)->getInitializer();
-            case ExpType::LIST:
-                if (exp.list.empty()) {
-                    LOG_CRITICAL("Empty list expression at line %d", exp.string.c_str());
-                }
-
-                auto oper = exp.list[0].string;
-                if (oper == "+" && exp.list.size() < 3) {
-                    LOG_CRITICAL("Operator '+' requires two operands at line %d", exp.string.c_str());
-                }
-
-                auto tag = exp.list[0];
-
-                if (tag.type == ExpType::SYMBOL) {
-                    auto oper = tag.string;
-
-                    if (oper == "+" || oper == "__PLUS_OPERAND__") {
-                        GEN_BINARY_OP(CreateAdd, "__tmpadd__");
-                    } else if (oper == "-" || oper == "__SUB_OPERAND__") {
-                        GEN_BINARY_OP(CreateSub, "__tmpsub__");
-                    } else if (oper == "*" || oper == "__MUL_OPERAND__") {
-                        GEN_BINARY_OP(CreateMul, "__tmpmul__");
-                    } else if (oper == "/" || oper == "__DIV_OPERAND__") {
-                        GEN_BINARY_OP(CreateSDiv, "__tmpdiv__");
-                    } else if (oper == ">" || oper == "__CMPG__") {
-                        GEN_BINARY_OP(CreateICmpUGT, "__tmpcmp__");
-                    } else if (oper == "==" || oper == "__CMPEQ__") {
-                        GEN_BINARY_OP(CreateICmpEQ, "__tmpcmp__");
-                    } else if (oper == "<" || oper == "__CMPL__") {
-                        GEN_BINARY_OP(CreateICmpULT, "__tmpcmp__");
-                    } else if (oper == "!=" || oper == "__CMPNE__") {
-                        GEN_BINARY_OP(CreateICmpNE, "__tmpcmp__");
-                    } else if (oper == ">=" || oper == "__CMPGE__") {
-                        GEN_BINARY_OP(CreateICmpUGE, "__tmpcmp__");
-                    } else if (oper == "<=" || oper == "__CMPLE__") {
-                        GEN_BINARY_OP(CreateICmpULE, "__tmpcmp__");
-                    }
-
-                    if (oper == "if") {
-                        if (exp.list.size() < 4) {
-                            LOG_CRITICAL(
-                                "if requires at least 4 arguments: condition, block, else, else_block",
-                                exp.string.c_str());
-                        }
-
-                        auto* merge_block = create_basic_block("if.end");
-                        std::vector<llvm::Value*> branch_values;
-                        std::vector<llvm::BasicBlock*> branch_blocks;
-
-                        auto* current_block = m_IR_BUILDER->GetInsertBlock();
-                        m_IR_BUILDER->SetInsertPoint(current_block);
-
-                        size_t i = 1;
-                        llvm::BasicBlock* next_block = nullptr;
-
-                        while (i < exp.list.size()) {
-                            if (exp.list[i].type == ExpType::SYMBOL
-                                && (exp.list[i].string == "else" || exp.list[i].string == "maybe"))
-                            {
-                                break;
-                            }
-
-                            if (i + 1 >= exp.list.size()) {
-                                LOG_CRITICAL("if: missing block for condition", exp.string.c_str());
-                            }
-
-                            auto* cond = generate_expression(exp.list[i], env);
-                            auto* then_block = create_basic_block("if.then", m_ACTIVE_FUNCTION);
-                            next_block = create_basic_block("if.next", m_ACTIVE_FUNCTION);
-
-                            m_IR_BUILDER->CreateCondBr(cond, then_block, next_block);
-
-                            m_IR_BUILDER->SetInsertPoint(then_block);
-                            auto* then_val = generate_expression(exp.list[i + 1], env);
-                            branch_values.push_back(then_val);
-                            branch_blocks.push_back(then_block);
-                            m_IR_BUILDER->CreateBr(merge_block);
-
-                            m_IR_BUILDER->SetInsertPoint(next_block);
-                            current_block = next_block;
-                            i += 2;
-                        }
-
-                        while (i < exp.list.size()) {
-                            if (exp.list[i].type == ExpType::SYMBOL && exp.list[i].string == "maybe") {
-                                if (i + 2 >= exp.list.size()) {
-                                    LOG_CRITICAL("maybe requires condition and block", exp.string.c_str());
-                                }
-
-                                auto* cond = generate_expression(exp.list[i + 1], env);
-                                auto* maybe_block = create_basic_block("maybe.then", m_ACTIVE_FUNCTION);
-                                next_block = create_basic_block("maybe.next", m_ACTIVE_FUNCTION);
-
-                                m_IR_BUILDER->CreateCondBr(cond, maybe_block, next_block);
-
-                                m_IR_BUILDER->SetInsertPoint(maybe_block);
-                                auto* maybe_val = generate_expression(exp.list[i + 2], env);
-                                branch_values.push_back(maybe_val);
-                                branch_blocks.push_back(maybe_block);
-                                m_IR_BUILDER->CreateBr(merge_block);
-
-                                m_IR_BUILDER->SetInsertPoint(next_block);
-                                current_block = next_block;
-                                i += 3;
-                            } else if (exp.list[i].type == ExpType::SYMBOL && exp.list[i].string == "else") {
-                                if (i + 1 >= exp.list.size()) {
-                                    LOG_CRITICAL("else requires block", exp.string.c_str());
-                                }
-
-                                auto* else_block = m_IR_BUILDER->GetInsertBlock();
-                                auto* else_val = generate_expression(exp.list[i + 1], env);
-                                branch_values.push_back(else_val);
-                                branch_blocks.push_back(else_block);
-                                m_IR_BUILDER->CreateBr(merge_block);
-                                i += 2;
-                                break;
-                            } else {
-                                LOG_CRITICAL("expected maybe or else after if conditions",
-                                             exp.string.c_str());
-                            }
-                        }
-
-                        m_ACTIVE_FUNCTION->insert(m_ACTIVE_FUNCTION->end(), merge_block);
-                        m_IR_BUILDER->SetInsertPoint(merge_block);
-
-                        if (!branch_values.empty()) {
-                            auto* first_type = branch_values[0]->getType();
-                            for (auto* val : branch_values) {
-                                if (val->getType() != first_type) {
-                                    LOG_CRITICAL("if: all branches must return same type",
-                                                 exp.string.c_str());
-                                }
-                            }
-
-                            auto* phi =
-                                m_IR_BUILDER->CreatePHI(first_type, branch_values.size(), "if_result");
-                            for (size_t idx = 0; idx < branch_values.size(); idx++) {
-                                phi->addIncoming(branch_values[idx], branch_blocks[idx]);
-                            }
-                            return phi;
-                        }
-
-                        return m_IR_BUILDER->getInt64(0);
-                    }
-
-                    // Loop
-                    if (oper == "loop") {
-                        auto* loop_body = create_basic_block("loop.body", m_ACTIVE_FUNCTION);
-                        auto* loop_exit = create_basic_block("loop.exit");
-
-                        m_IR_BUILDER->CreateBr(loop_body);
-                        m_IR_BUILDER->SetInsertPoint(loop_body);
-
-                        LoopBlocks const loop_blocks = {loop_exit, loop_body};
-                        m_LOOP_STACK.push_back(loop_blocks);
-
-                        for (size_t i = 1; i < exp.list.size(); i++) {
-                            generate_expression(exp.list[i], env);
-                        }
-
-                        if (m_IR_BUILDER->GetInsertBlock()->getTerminator() == nullptr) {
-                            m_IR_BUILDER->CreateBr(loop_body);
-                        }
-
-                        m_ACTIVE_FUNCTION->insert(m_ACTIVE_FUNCTION->end(), loop_exit);
-                        m_IR_BUILDER->SetInsertPoint(loop_exit);
-                        m_LOOP_STACK.pop_back();
-
-                        return m_IR_BUILDER->getInt64(0);
-                    }
-
-                    // Func
-                    if (oper == "func") {
-                        return compile_function(exp, /* name */ exp.list[1].string, env);
-                    }
-
-                    // While
-                    if (oper == "while") {
-                        auto* break_blog = create_basic_block("break");
-                        auto* continue_block = create_basic_block("continue");
-                        m_LOOP_STACK.push_back({break_blog, continue_block});
-
-                        auto* condition_block = create_basic_block("cond", m_ACTIVE_FUNCTION);
-                        m_IR_BUILDER->CreateBr(condition_block);
-
-                        auto* body_block = create_basic_block("body");
-
-                        m_IR_BUILDER->SetInsertPoint(condition_block);
-                        auto* condition = generate_expression(exp.list[1], env);
-                        m_IR_BUILDER->CreateCondBr(condition, body_block, break_blog);
-
-                        m_ACTIVE_FUNCTION->insert(m_ACTIVE_FUNCTION->end(), body_block);
-                        m_IR_BUILDER->SetInsertPoint(body_block);
-                        generate_expression(exp.list[2], env);
-                        if (m_IR_BUILDER->GetInsertBlock()->getTerminator() == nullptr) {
-                            m_IR_BUILDER->CreateBr(continue_block);
-                        }
-
-                        m_ACTIVE_FUNCTION->insert(m_ACTIVE_FUNCTION->end(), continue_block);
-                        m_IR_BUILDER->SetInsertPoint(continue_block);
-                        m_IR_BUILDER->CreateBr(condition_block);
-
-                        m_ACTIVE_FUNCTION->insert(m_ACTIVE_FUNCTION->end(), break_blog);
-                        m_IR_BUILDER->SetInsertPoint(break_blog);
-                        m_LOOP_STACK.pop_back();
-
-                        return m_IR_BUILDER->getInt64(0);
-                    }
-
-                    if (oper == "for") {
-                        auto init = exp.list[1];
-                        auto condition = exp.list[2];
-                        auto step = exp.list[3];
-                        auto body = exp.list[4];
-
-                        // `for` environment
-                        auto for_env =
-                            std::make_shared<Environment>(std::map<std::string, llvm::Value*>(), env);
-
-                        // Generate init expression
-                        generate_expression(init, for_env);
-
-                        // Create blocks
-                        auto* cond_block = create_basic_block("for.cond", m_ACTIVE_FUNCTION);
-                        auto* body_block = create_basic_block("for.body");
-                        auto* step_block = create_basic_block("for.step");
-                        auto* break_blog = create_basic_block("for.break");
-
-                        // Conditions
-                        m_IR_BUILDER->CreateBr(cond_block);
-
-                        // Conditions block
-                        m_IR_BUILDER->SetInsertPoint(cond_block);
-                        auto* cond_value = generate_expression(condition, for_env);
-                        m_IR_BUILDER->CreateCondBr(cond_value, body_block, break_blog);
-
-                        // Body block
-                        m_ACTIVE_FUNCTION->insert(m_ACTIVE_FUNCTION->end(), body_block);
-                        m_IR_BUILDER->SetInsertPoint(body_block);
-                        m_LOOP_STACK.push_back({break_blog, step_block});
-                        generate_expression(body, for_env);
-                        m_LOOP_STACK.pop_back();
-
-                        // Step
-                        if (m_IR_BUILDER->GetInsertBlock()->getTerminator() == nullptr) {
-                            m_IR_BUILDER->CreateBr(step_block);
-                        }
-
-                        // Step block
-                        m_ACTIVE_FUNCTION->insert(m_ACTIVE_FUNCTION->end(), step_block);
-                        m_IR_BUILDER->SetInsertPoint(step_block);
-                        generate_expression(step, for_env);
-                        m_IR_BUILDER->CreateBr(cond_block);
-
-                        // Break blog
-                        m_ACTIVE_FUNCTION->insert(m_ACTIVE_FUNCTION->end(), break_blog);
-                        m_IR_BUILDER->SetInsertPoint(break_blog);
-
-                        return m_IR_BUILDER->getInt64(0);
-                    }
-
-                    if (oper == "break") {
-                        if (m_LOOP_STACK.empty()) {
-                            LOG_CRITICAL("break outside of loop", exp.string.c_str());
-                        }
-
-                        auto& loop = m_LOOP_STACK.back();
-                        m_IR_BUILDER->CreateBr(loop.break_blog);
-
-                        auto* after = create_basic_block("after_break");
-                        m_ACTIVE_FUNCTION->insert(m_ACTIVE_FUNCTION->end(), after);
-                        m_IR_BUILDER->SetInsertPoint(after);
-
-                        return m_IR_BUILDER->getInt64(0);
-                    }
-
-                    if (oper == "continue") {
-                        if (m_LOOP_STACK.empty()) {
-                            LOG_CRITICAL("continue outside of loop", exp.string.c_str());
-                        }
-                        auto& loop = m_LOOP_STACK.back();
-                        m_IR_BUILDER->CreateBr(loop.continue_block);
-
-                        auto* after = create_basic_block("after_continue");
-                        m_ACTIVE_FUNCTION->insert(m_ACTIVE_FUNCTION->end(), after);
-                        m_IR_BUILDER->SetInsertPoint(after);
-
-                        return m_IR_BUILDER->getInt64(0);
-                    }
-
-                    // if-then-else. Short condition without else-if blocks.
-                    if (oper == "check") {
-                        auto* condition = generate_expression(exp.list[1], env);
-
-                        auto* then_block = create_basic_block("then", m_ACTIVE_FUNCTION);
-                        auto* else_block = create_basic_block("else");
-                        auto* if_end_block = create_basic_block("ifend");
-
-                        m_IR_BUILDER->CreateCondBr(condition, then_block, else_block);
-
-                        // Then branch
-                        m_IR_BUILDER->SetInsertPoint(then_block);
-                        auto* then_res = generate_expression(exp.list[2], env);
-
-                        if (m_IR_BUILDER->GetInsertBlock()->getTerminator() == nullptr) {
-                            m_IR_BUILDER->CreateBr(if_end_block);
-                        }
-                        then_block = m_IR_BUILDER->GetInsertBlock();
-
-                        // Else branch
-                        m_ACTIVE_FUNCTION->insert(m_ACTIVE_FUNCTION->end(), else_block);
-                        m_IR_BUILDER->SetInsertPoint(else_block);
-                        auto* else_res = generate_expression(exp.list[3], env);
-                        if (m_IR_BUILDER->GetInsertBlock()->getTerminator() == nullptr) {
-                            m_IR_BUILDER->CreateBr(if_end_block);
-                        }
-                        else_block = m_IR_BUILDER->GetInsertBlock();
-
-                        // If-end block
-                        m_ACTIVE_FUNCTION->insert(m_ACTIVE_FUNCTION->end(), if_end_block);
-                        m_IR_BUILDER->SetInsertPoint(if_end_block);
-
-                        if ((then_block->getTerminator() == nullptr)
-                            && (else_block->getTerminator() == nullptr))
-                        {
-                            auto* phi = m_IR_BUILDER->CreatePHI(then_res->getType(), 2, "__tmpcheck__");
-                            phi->addIncoming(then_res, then_block);
-                            phi->addIncoming(else_res, else_block);
-                            return phi;
-                        }
-
-                        return m_IR_BUILDER->getInt64(0);
-                    }
-
-                    if (oper == "set") {
-                        auto var_name = exp.list[1].string;
-
-                        if (m_CONSTANTS.count(var_name) != 0U) {
-                            LOG_CRITICAL("Var name \"%s\" is constant", var_name.c_str());
-                            return m_IR_BUILDER->getInt64(0);
-                        }
-
-                        auto* value = generate_expression(exp.list[2], env);
-
-                        auto* var_binding = env->lookup_by_name(var_name);
-
-                        m_IR_BUILDER->CreateStore(value, var_binding);
-
-                        return value;
-                    }
-
-                    if (oper == "var" || oper == "const") {
-                        auto var_name_declaration = exp.list[1];
-                        auto var_name = extract_var_name(var_name_declaration);
-
-                        auto* init = generate_expression(exp.list[2], env);
-
-                        auto* var_type = extract_var_type(var_name_declaration);
-
-                        auto* var_binding = alloc_var(var_name, var_type, env);
-
-                        if (oper == "const") {
-                            m_CONSTANTS[var_name] = var_binding;
-                        }
-
-                        return m_IR_BUILDER->CreateStore(init, var_binding);
-                    }
-
-                    if (oper == "scope") {
-                        llvm::Value* block_res = nullptr;
-
-                        auto block_env =
-                            std::make_shared<Environment>(std::map<std::string, llvm::Value*> {}, env);
-
-                        for (auto i = 1; i < exp.list.size(); i++) {
-                            block_res = generate_expression(exp.list[i], block_env);
-                        }
-
-                        return block_res;
-                    }
-
-                    if (oper == "fprint") {
-                        auto* printf_function = m_MODULE->getFunction("printf");
-                        std::vector<llvm::Value*> args {};
-
-                        for (auto i = 1; i < exp.list.size(); ++i) {
-                            args.push_back(generate_expression(exp.list[i], env));
-                        }
-
-                        return m_IR_BUILDER->CreateCall(printf_function, args);
-                    }
-
-                    if (oper == "finput") {
-                        auto* scanf_fn = m_MODULE->getFunction("scanf");
-                        std::vector<llvm::Value*> args;
-
-                        // Format string
-                        args.push_back(generate_expression(exp.list[1], env));
-
-                        // Variable references
-                        for (size_t i = 2; i < exp.list.size(); ++i) {
-                            std::string const var_name = exp.list[i].string;
-                            llvm::Value* var_ptr = env->lookup_by_name(var_name);
-                            args.push_back(var_ptr);
-                        }
-
-                        return m_IR_BUILDER->CreateCall(scanf_fn, args);
-                    }
-
-                    // Function calls
-
-                    auto* callable = generate_expression(exp.list[0], env);
-
-                    std::vector<llvm::Value*> args {};
-
-                    for (auto i = 1; i < exp.list.size(); i++) {
-                        args.push_back(generate_expression(exp.list[i], env));
-                    }
-
-                    auto* fn = (llvm::Function*)callable;
-
-                    return m_IR_BUILDER->CreateCall(fn, args);
-                }
-
-                return m_IR_BUILDER->getInt64(0);
-                break;
-        }
-
-        return m_IR_BUILDER->getInt64(0);
-    }
+    auto get_type(const std::string& type_string) -> llvm::Type*;
 
     /**
-     * @brief Set the up extern functions
+     * @brief Extracts variable type from declaration expression
      *
-     * Define external functions (from libc++)
-     **/
-    void setup_extern_functions() {
-        LOG_TRACE
-
-        // i8* to substitute for char*, void*, etc
-        auto* byte_ptr_ty = m_IR_BUILDER->getInt8Ty()->getPointerTo();
-
-        // int printf(const char* format, ...);
-        m_MODULE->getOrInsertFunction("printf",
-                                      llvm::FunctionType::get(m_IR_BUILDER->getInt64Ty(), byte_ptr_ty, true));
-
-        auto* scanf_type = llvm::FunctionType::get(m_IR_BUILDER->getInt32Ty(),
-                                                   {m_IR_BUILDER->getInt8Ty()->getPointerTo()},
-                                                   true    // variadic
-        );
-        m_MODULE->getOrInsertFunction("scanf", scanf_type);
-    }
+     * @param exp Variable declaration expression
+     * @return llvm::Type* Resolved LLVM type
+     */
+    auto extract_var_type(const Exp& exp) -> llvm::Type*;
 
     /**
-     * @brief Creates function with proper setup
-     * @param name Function name ("main")
-     * @param type Function signature (return + params)
+     * @brief Derives function type from function expression
      *
-     * Three-step process:
-     * 1. Check if function exists
-     * 2. Create prototype if needed
-     * 3. Prepare first code block
+     * @param fn_exp Function definition expression
+     * @return llvm::FunctionType* Complete function signature type
+     */
+    auto extract_function_type(const Exp& fn_exp) -> llvm::FunctionType*;
+
+    /**
+     * @brief Allocates stack space for a variable
+     *
+     * @param name Variable name
+     * @param var_type LLVM type of variable
+     * @param env Current environment
+     * @return llvm::Value* Pointer to allocated stack slot
+     */
+    auto alloc_var(const std::string& name, llvm::Type* var_type, const env& env) -> llvm::Value*;
+
+    /**
+     * @brief Compiles function definition to LLVM function
+     *
+     * @param fn_exp Function expression from AST
+     * @param fn_name Name of function
+     * @param env Parent environment
+     * @return llvm::Value* Pointer to generated function
+     */
+    auto compile_function(const Exp& fn_exp, const std::string& fn_name, const env& env) -> llvm::Value*;
+
+    /**
+     * @brief Generates IR for any expression type
+     *
+     * Handles all expression types including:
+     * - Literals (numbers, strings)
+     * - Variables
+     * - Binary operations
+     * - Control structures (if, loop, while)
+     * - Function calls
+     * - Variable declarations
+     *
+     * @param exp Expression to compile
+     * @param env Current environment
+     * @return llvm::Value* Resulting LLVM value
+     */
+    auto generate_expression(const Exp& exp, const env& env) -> llvm::Value*;
+
+    /**
+     * @brief Registers external function prototypes
+     *
+     * Adds declarations for:
+     * - printf (output)
+     * - scanf (input)
+     */
+    void setup_extern_functions();
+
+    /**
+     * @brief Creates complete function with body
+     *
+     * @param name Function name
+     * @param type Function signature type
+     * @param env Environment for symbol registration
+     * @return llvm::Function* Created function
      */
     auto create_function(const std::string& name, llvm::FunctionType* type, const env& env)
-        -> llvm::Function* {
-        LOG_TRACE
-
-        if (auto* existing = m_MODULE->getFunction(name)) {
-            return existing;
-        }
-
-        auto* func = create_function_prototype(name, type, env);
-        setup_function_body(func);
-        return func;
-    }
+        -> llvm::Function*;
 
     /**
-     * @brief Creates function declaration (prototype)
-     * @param name Visible function name
-     * @param type Function signature
+     * @brief Creates function prototype (declaration only)
      *
-     * Important choices:
-     * - ExternalLinkage: Makes function visible to linker
-     * - Verification: Checks for common errors
+     * @param name Function name
+     * @param type Function signature type
+     * @param env Environment for symbol registration
+     * @return llvm::Function* Created function prototype
      */
     auto create_function_prototype(const std::string& name, llvm::FunctionType* type, const env& env)
-        -> llvm::Function* {
-        LOG_TRACE
-
-        auto* func = llvm::Function::Create(type,
-                                            llvm::Function::ExternalLinkage,    // Why? So OS can find main()
-                                            name,
-                                            m_MODULE.get()    // Module ownership
-        );
-        verifyFunction(*func);    // Like spell-check for LLVM IR
-
-        env->define(name, func);
-
-        return func;
-    }
+        -> llvm::Function*;
 
     /**
-     * @brief Prepares function body structure
-     * @param func Function to receive body
+     * @brief Sets up function body structure
      *
-     * Every LLVM function needs:
-     * 1. At least one basic block (container for code)
-     * 2. A starting point (entry block)
-     * 3. Terminator instruction (like return)
+     * Creates entry block and positions builder for code generation
+     *
+     * @param func Function to initialize
      */
-    void setup_function_body(llvm::Function* func) {
-        LOG_TRACE
-
-        auto* entry_block = create_basic_block("entry", func);
-        m_IR_BUILDER->SetInsertPoint(entry_block);    // "Start writing here"
-    }
+    void setup_function_body(llvm::Function* func);
 
     /**
-     * @brief Creates labeled code block
-     * @param label Block name (for debugging)
-     * @param parent Parent function (optional)
+     * @brief Creates labeled basic block
      *
-     * Basic Blocks (BBs):
-     * - Linear code sequences
-     * - Must end with terminator (ret, jump)
-     * - Labels help debuggers understand code
+     * @param label Name for the basic block
+     * @param parent Function containing the block (nullptr for detached)
+     * @return llvm::BasicBlock* Created basic block
      */
-    auto create_basic_block(const std::string& label, llvm::Function* parent = nullptr) -> llvm::BasicBlock* {
-        LOG_TRACE
-
-        return llvm::BasicBlock::Create(*m_CONTEXT, label, parent);
-    }
+    auto create_basic_block(const std::string& label, llvm::Function* parent = nullptr) -> llvm::BasicBlock*;
 
     /**
-     * @brief Saves generated IR to text file
-     * @param filename Output path (.ll extension)
+     * @brief Saves generated module to file
      *
-     * LLVM assembly format:
-     * - Human-readable
-     * - Can be modified and recompiled
-     * - Contains target information (CPU features)
+     * Outputs human-readable LLVM IR to specified file
+     *
+     * @param filename Output filename (.ll extension recommended)
      */
-    void save_module_to_file(const std::string& filename) {
-        LOG_TRACE
-
-        std::error_code err_code;
-        llvm::raw_fd_ostream out_file(filename, err_code);
-        m_MODULE->print(out_file, nullptr);    // Write module contents
-    }
+    void save_module_to_file(const std::string& filename);
 
     /**
-     * @brief Initializes LLVM components
+     * @brief Initializes core LLVM components
      *
-     * Order matters:
-     * 1. Context first (needed by everyone)
-     * 2. Module (needs context)
-     * 3. Builder (needs context)
+     * Creates:
+     * - LLVM context
+     * - Module
+     * - IR builders
      */
-    void initialize_module() {
-        LOG_TRACE
-
-        m_CONTEXT = std::make_unique<llvm::LLVMContext>();
-        m_MODULE = std::make_unique<llvm::Module>("MorningLangCompilationUnit",    // Module name
-                                                  *m_CONTEXT    // Context reference
-        );
-        m_IR_BUILDER = std::make_unique<llvm::IRBuilder<>>(*m_CONTEXT);
-
-        m_VARS_BUILDER = std::make_unique<llvm::IRBuilder<>>(*m_CONTEXT);
-    }
+    void initialize_module();
 };

@@ -10,7 +10,7 @@ def run_morninglang():
     os.system('./build/bin/morninglang')
 
 def clang_compile():
-    os.system('clang++ -O3 -Igc -lgc ./out.ll -o ./out.bin')
+    os.system('clang++ -O3 ./out.ll -o ./out.bin')
 
 def run():
     os.system("""./out.bin

@@ -32,9 +32,10 @@ add_library(
     morninglang_lib OBJECT
     source/tracelogger.cpp
     source/morningllvm.hpp
+    source/morningllvm.cpp
     source/parser/MorningLangGrammar.h
 )
-target_link_libraries(morninglang_lib ${llvm_libs} gc)
+target_link_libraries(morninglang_lib ${llvm_libs})
 target_link_libraries(morninglang_lib
     LLVMPasses
     LLVMX86CodeGen

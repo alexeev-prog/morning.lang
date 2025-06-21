@@ -107,7 +107,7 @@ namespace {
 
         // Компиляция в бинарник
         std::string clang_cmd = "clang++ -O3 " + safe_path(opt_ll_file) +
-                                " -lgc -o " + safe_path(bin_file);
+                                " -o " + safe_path(bin_file);
 
         if (execute_command(clang_cmd) != 0) {
             std::cerr << "Error: Compilation to binary failed\n";
