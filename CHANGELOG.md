@@ -1,3 +1,21 @@
+commit e45061a72b93ceccccd09d8f89f3e0cdf6c49cac
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Sat Jun 21 23:25:23 2025 +0700
+
+    refactor: add logging to files
+
+commit 27cf7aa63998417256b71726607b6a0aeaf100b6
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Sat Jun 21 23:25:07 2025 +0700
+
+    refactor: add logging to files
+
+commit 23d3dcf170acfab33957ab27385ca326c8e09c15
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Sat Jun 21 22:48:54 2025 +0700
+
+    refactor: split logger into files, change from `maybe` to `elif`, fix errors
+
 commit b4b56034c508841e37cac49529ec59f920334391
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Sat Jun 21 21:46:24 2025 +0700
