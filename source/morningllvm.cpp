@@ -365,7 +365,9 @@ auto MorningLanguageLLVM::compile_function(const Exp& fn_exp, const std::string&
 
     auto idx = 0;
 
-    auto fn_env = std::make_shared<Environment>(std::map<std::string, llvm::Value*> {}, env);
+    // auto fn_env = std::make_shared<Environment>(std::map<std::string, llvm::Value*> {}, env);
+    auto fn_env = std::make_shared<Environment>(std::map<std::string, llvm::Value*>(), env);
+    fn_env->define(fn_name, new_fn);
 
     for (auto& arg : m_ACTIVE_FUNCTION->args()) {
         auto param = params.list[idx++];
@@ -622,7 +624,10 @@ auto MorningLanguageLLVM::generate_expression(const Exp& exp, const env& env) ->
                 // Func
                 if (oper == "func") {
                     LOG_DEBUG("Process function: %s", exp.list[1].string.c_str());
-                    return compile_function(exp, /* name */ exp.list[1].string, env);
+
+                    auto *fn = compile_function(exp, /* name */ exp.list[1].string, env);
+                    env->define(exp.list[1].string, fn);
+                    return fn;
                 }
 
                 // While
@@ -780,15 +785,10 @@ auto MorningLanguageLLVM::generate_expression(const Exp& exp, const env& env) ->
                     m_ACTIVE_FUNCTION->insert(m_ACTIVE_FUNCTION->end(), if_end_block);
                     m_IR_BUILDER->SetInsertPoint(if_end_block);
 
-                    if ((then_block->getTerminator() == nullptr) && (else_block->getTerminator() == nullptr))
-                    {
-                        auto* phi = m_IR_BUILDER->CreatePHI(then_res->getType(), 2, "__tmpcheck__");
-                        phi->addIncoming(then_res, then_block);
-                        phi->addIncoming(else_res, else_block);
-                        return phi;
-                    }
-
-                    return m_IR_BUILDER->getInt64(0);
+                    auto* phi = m_IR_BUILDER->CreatePHI(then_res->getType(), 2, "__tmpcheck__");
+                    phi->addIncoming(then_res, then_block);
+                    phi->addIncoming(else_res, else_block);
+                    return phi;
                 }
 
                 if (oper == "set") {

@@ -160,22 +160,17 @@ F --> G
 
 ## 💡 Language Highlights
 
-### 🧩 Example
+### 🧩 Factorial
 
 ```morning
-[var [ALPHA !int] 42]
+[func factorial (x) (scope
+	(check (== x 0)
+        1
+        (* x (factorial (- x 1)))
+    )
+)]
 
-[scope
-    [var [ALPHA !string] "Hello"]
-    [fprint "ALPHA: %s\n" ALPHA]]
-
-[fprint "ALPHA: %d\n" ALPHA]
-
-[set ALPHA 100]
-
-[fprint "ALPHA: %d\n" ALPHA]
-
-[fprint "_VERSION: %d\n\n" _VERSION] // _VERSION is reserved global var
+(fprint "Factorial of 5: %d\n" (factorial 5))
 ```
 
 ### For loops

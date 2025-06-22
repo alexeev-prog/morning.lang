@@ -1,3 +1,9 @@
+commit 07345a6513a9d39a027b48ad046235ec866fd4ac
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Sun Jun 22 06:46:27 2025 +0700
+
+    improve typing checks, fix examples, add script for test examples
+
 commit 0aa0a9ce651c9d2427d93a441c8641752c27759e
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Sun Jun 22 04:50:06 2025 +0700

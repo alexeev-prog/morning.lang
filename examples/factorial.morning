@@ -1,0 +1,8 @@
+[func factorial (x) (scope
+	(check (== x 0)
+        1
+        (* x (factorial (- x 1)))
+    )
+)]
+
+(fprint "Factorial of 5: %d\n" (factorial 5))
