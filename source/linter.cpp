@@ -4,11 +4,11 @@
 #include <algorithm>
 
 // Initialize with valid operators
-Linter::Linter() : operators_{"+", "-", "*", "/", ">", "<", ">=", "<=", "==", "!="},
-                   keywords_{"func", "scope", "fprint", "check", "if", "elif", "else",
-                            "finput", "while", "loop", "for", "set", "var", "const",
+Linter::Linter() : operators_{"+", "-", "*", "/", ">", "<", ">=", "<=", "==", "!=",
                             "!int", "!int64", "!int32", "!int16", "!int8", "!bool",
-                            "!none", "!str"} {
+                            "!none", "!str"},
+                   keywords_{"func", "scope", "fprint", "check", "if", "elif", "else",
+                            "finput", "while", "loop", "for", "set", "var", "const",} {
     // Rule: Valid identifier format
     addRule({
         "W001",

@@ -52,6 +52,7 @@ Usage: morningllvm [options]
 Options:
     -e, --expression  Expression to parse
     -f, --file        File to parse
+    --lint            File to lint
     -o, --output      Output binary name
 ```
 

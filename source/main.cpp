@@ -28,6 +28,7 @@ namespace {
                   << "Options:\n"
                   << "    -e, --expression  Expression to parse\n"
                   << "    -f, --file        File to parse\n"
+                  << "    --lint            File to lint\n"
                   << "    -o, --output      Output binary name\n\n";
     }
 
