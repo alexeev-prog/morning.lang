@@ -10,6 +10,7 @@
 #include <algorithm>
 
 #include "logger.hpp"
+#include "linter.hpp"
 
 namespace fs = std::filesystem;
 
@@ -272,6 +273,52 @@ auto main(int argc, char **argv) -> int {
     if (input.cmd_option_exists("-h") || input.cmd_option_exists("--help")) {
         print_help();
         return 0;
+    }
+
+    if (input.cmd_option_exists("--lint")) {
+        const std::string filename = input.get_cmd_option("--lint");
+
+        if (!fs::exists(filename)) {
+            LOG_ERROR("File \"%s\" not found", filename.c_str());
+            return 1;
+        }
+
+        std::ifstream file(filename);
+        std::string program((std::istreambuf_iterator<char>(file)),
+                     std::istreambuf_iterator<char>());
+
+        Linter linter;
+
+        // Синтаксическая проверка
+        auto syntax_errors = linter.check_syntax(program);
+        if (!syntax_errors.empty()) {
+            LOG_ERROR("Syntax errors in %s:", filename.c_str());
+            for (const auto& err : syntax_errors) {
+                LOG_ERROR("  %s", err.c_str());
+            }
+            return 1;
+        }
+
+        // Глубокий линтинг
+        try {
+            syntax::MorningLangGrammar parser;
+            Exp ast = parser.parse("[scope " + program + "]");
+            auto issues = linter.lint(ast);
+
+            if (issues.empty()) {
+                LOG_INFO("No lint issues found in %s", filename.c_str());
+                return 0;
+            }
+
+            LOG_WARN("Lint issues in %s:", filename.c_str());
+            for (const auto& issue : issues) {
+                LOG_WARN("  %s", issue.c_str());
+            }
+            return 2; // Отдельный код возврата для предупреждений
+        } catch (const std::exception& e) {
+            LOG_ERROR("Linting failed: %s", e.what());
+            return 1;
+        }
     }
 
     if (input.cmd_option_exists("-o") || input.cmd_option_exists("--output")) {

@@ -31,3 +31,12 @@
 
 [fprint "sum 100 1: %d\n" (sum 100 1)]
 [fprint "%S\n\n" NAME]
+
+[func factorial (x) (scope
+	(check (== x 0)
+        1
+        (* x (factorial (- x 1)))
+    )
+)]
+
+(fprint "Factorial of 5: %d\n" (factorial 5))

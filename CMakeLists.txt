@@ -33,6 +33,7 @@ add_library(
     source/tracelogger.cpp
     source/morningllvm.cpp
     source/logger.cpp
+    source/linter.cpp
 )
 target_link_libraries(morninglang_lib ${llvm_libs})
 target_link_libraries(morninglang_lib
