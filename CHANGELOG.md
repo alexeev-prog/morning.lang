@@ -1,3 +1,21 @@
+commit 999d3bdafdd89a43ee5c136d933475ceb9364687
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Sun Jun 22 07:53:33 2025 +0700
+
+    fix bugs
+
+commit f6ba14d9308934e8b2f1a1606ab52bd72e4b4629
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Sun Jun 22 07:50:07 2025 +0700
+
+    add linter
+
+commit b63d110be0406e24bc5a5b19a8e64d15557e1bb8
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Sun Jun 22 07:09:14 2025 +0700
+
+    feat: add recursion
+
 commit 07345a6513a9d39a027b48ad046235ec866fd4ac
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Sun Jun 22 06:46:27 2025 +0700
