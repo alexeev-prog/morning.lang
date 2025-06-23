@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Verify compiler exists
 if [ ! -x "./build/bin/morninglang" ]; then
