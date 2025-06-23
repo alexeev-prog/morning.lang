@@ -3,6 +3,14 @@
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/Value.h>
 
+/**
+ * @brief Implicit cast
+ *
+ * @param value value
+ * @param target_type target type
+ * @param builder IR builder
+ * @return llvm::Value*
+ **/
 inline auto implicit_cast(
     llvm::Value* value,
     llvm::Type* target_type,

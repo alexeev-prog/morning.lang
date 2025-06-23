@@ -1,3 +1,9 @@
+commit 834ab9bde71f92eb46938db022bfc0160eb082e6
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Tue Jun 24 02:02:36 2025 +0700
+
+    move binary operations -> codegen/arithmetics, move implicit cast -> utils/cast
+
 commit f23fed4a216b2c61d559deba2f6343442338ef00
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Tue Jun 24 01:12:55 2025 +0700

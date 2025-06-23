@@ -4,7 +4,7 @@
 using namespace llvm;
 
 const std::unordered_map<std::string, std::string>
-ArithmeticCodegen::OP_MAPPING = {
+ArithmeticCodegen::m_OP_MAPPING = {
     {"__PLUS_OPERAND__", "+"},
     {"__SUB_OPERAND__", "-"},
     {"__MUL_OPERAND__", "*"},
@@ -17,10 +17,10 @@ ArithmeticCodegen::OP_MAPPING = {
     {"__CMPNE__", "!="}
 };
 
-Type* ArithmeticCodegen::get_common_type(
+auto ArithmeticCodegen::get_common_type(
     Value* left,
     Value* right
-) {
+) -> Type* {
     Type* left_type = left->getType();
     Type* right_type = right->getType();
 
@@ -30,14 +30,14 @@ Type* ArithmeticCodegen::get_common_type(
     return left_type;
 }
 
-Value* ArithmeticCodegen::generate_binary_op(
+auto ArithmeticCodegen::generate_binary_op(
     const std::string& op,
     Value* left,
     Value* right,
     IRBuilder<>& builder
-) {
+) -> Value* {
     std::string operation = op;
-    if (auto it = OP_MAPPING.find(op); it != OP_MAPPING.end()) {
+    if (auto it = m_OP_MAPPING.find(op); it != m_OP_MAPPING.end()) {
         operation = it->second;
     }
 
