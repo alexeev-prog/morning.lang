@@ -288,6 +288,10 @@ auto MorningLanguageLLVM::get_type(const std::string& type_string, const std::st
         return m_IR_BUILDER->getInt8Ty()->getPointerTo();
     }
 
+    if (type_string == "!ptr") {
+        return m_IR_BUILDER->getInt8Ty()->getPointerTo();
+    }
+
     if (type_string == "!frac") {
         return m_IR_BUILDER->getDoubleTy();
     }
@@ -298,6 +302,24 @@ auto MorningLanguageLLVM::get_type(const std::string& type_string, const std::st
 
     if (type_string == "!none") {
         return m_IR_BUILDER->getVoidTy();
+    }
+
+    if (type_string.find("!size:") == 0) {
+        size_t colon_pos = type_string.find(':');
+        if (colon_pos == std::string::npos) {
+            LOG_CRITICAL("Invalid size constraint for '%s'", var_name.c_str());
+        }
+
+        std::string base_type = type_string.substr(colon_pos + 1);
+        llvm::Type* type = get_type(base_type, var_name);
+        uint64_t expected_size = std::stoull(type_string.substr(6, colon_pos - 6));
+        uint64_t actual_size = get_type_size(type);
+
+        if (actual_size != expected_size) {
+            LOG_CRITICAL("Size mismatch for '%s': expected %d bytes, actual %d bytes",
+                         var_name.c_str(), expected_size, actual_size);
+        }
+        return type;
     }
 
     if (type_string.find("!ptr<") == 0) {
@@ -560,6 +582,192 @@ auto MorningLanguageLLVM::generate_expression(const Exp& exp, const env& env) ->
                         llvm::ArrayType::get(element_type, elements.size()),
                         elements
                     );
+                }
+
+                if (oper == "sizeof") {
+                    LOG_DEBUG("Process sizeof operator");
+
+                    if (exp.list.size() < 2) {
+                        LOG_CRITICAL("sizeof requires a type argument");
+                    }
+
+                    std::string type_str = exp.list[1].string;
+                    llvm::Type* target_type = get_type(type_str, "sizeof");
+
+                    llvm::DataLayout data_layout(m_MODULE.get());
+                    llvm::TypeSize type_size = data_layout.getTypeAllocSize(target_type);
+                    return m_IR_BUILDER->getInt64(type_size.getFixedValue());
+                }
+
+                if (oper == "mem-alloc") {
+                    LOG_DEBUG("Process memory allocation");
+
+                    auto size_exp = exp.list[1];
+                    auto* size_val = generate_expression(size_exp, env);
+                    auto* malloc_fn = m_MODULE->getFunction("malloc");
+
+                    if (!malloc_fn) {
+                        auto* malloc_type = llvm::FunctionType::get(
+                            m_IR_BUILDER->getInt8Ty()->getPointerTo(),
+                            {m_IR_BUILDER->getInt64Ty()},
+                            false
+                        );
+                        malloc_fn = llvm::Function::Create(
+                            malloc_type,
+                            llvm::Function::ExternalLinkage,
+                            "malloc",
+                            m_MODULE.get()
+                        );
+                    }
+
+                    return m_IR_BUILDER->CreateCall(malloc_fn, {size_val}, "malloc");
+                }
+
+                if (oper == "mem-free") {
+                    LOG_DEBUG("Process memory free");
+
+                    auto ptr_exp = exp.list[1];
+                    auto* ptr_val = generate_expression(ptr_exp, env);
+                    auto* free_fn = m_MODULE->getFunction("free");
+
+                    if (!free_fn) {
+                        auto* free_type = llvm::FunctionType::get(
+                            m_IR_BUILDER->getVoidTy(),
+                            {m_IR_BUILDER->getInt8Ty()->getPointerTo()},
+                            false
+                        );
+                        free_fn = llvm::Function::Create(
+                            free_type,
+                            llvm::Function::ExternalLinkage,
+                            "free",
+                            m_MODULE.get()
+                        );
+                    }
+
+                    m_IR_BUILDER->CreateCall(free_fn, {ptr_val});
+                    return m_IR_BUILDER->getInt32(0);
+                }
+
+                if (oper == "bit-and") {
+                    auto* left = generate_expression(exp.list[1], env);
+                    auto* right = generate_expression(exp.list[2], env);
+                    return m_IR_BUILDER->CreateAnd(left, right, "bit_and");
+                }
+                if (oper == "bit-or") {
+                    auto* left = generate_expression(exp.list[1], env);
+                    auto* right = generate_expression(exp.list[2], env);
+                    return m_IR_BUILDER->CreateOr(left, right, "bit_or");
+                }
+                if (oper == "bit-xor") {
+                    auto* left = generate_expression(exp.list[1], env);
+                    auto* right = generate_expression(exp.list[2], env);
+                    return m_IR_BUILDER->CreateXor(left, right, "bit_xor");
+                }
+                if (oper == "bit-shl") {
+                    auto* value = generate_expression(exp.list[1], env);
+                    auto* shift = generate_expression(exp.list[2], env);
+                    return m_IR_BUILDER->CreateShl(value, shift, "bit_shl");
+                }
+                if (oper == "bit-shr") {
+                    auto* value = generate_expression(exp.list[1], env);
+                    auto* shift = generate_expression(exp.list[2], env);
+                    return m_IR_BUILDER->CreateLShr(value, shift, "bit_shr");
+                }
+                if (oper == "bit-not") {
+                    auto* value = generate_expression(exp.list[1], env);
+                    return m_IR_BUILDER->CreateNot(value, "bit_not");
+                }
+
+                // Работа с байтами
+                if (oper == "byte-read") {
+                    auto* ptr = generate_expression(exp.list[1], env);
+                    auto* casted_ptr = m_IR_BUILDER->CreateBitCast(
+                        ptr,
+                        m_IR_BUILDER->getInt8Ty()->getPointerTo()
+                    );
+                    return m_IR_BUILDER->CreateLoad(
+                        m_IR_BUILDER->getInt8Ty(),
+                        casted_ptr,
+                        "byte_read"
+                    );
+                }
+                if (oper == "byte-write") {
+                    auto* ptr = generate_expression(exp.list[1], env);
+                    auto* value = generate_expression(exp.list[2], env);
+                    auto* casted_ptr = m_IR_BUILDER->CreateBitCast(
+                        ptr,
+                        m_IR_BUILDER->getInt8Ty()->getPointerTo()
+                    );
+                    return m_IR_BUILDER->CreateStore(
+                        m_IR_BUILDER->CreateTrunc(value, m_IR_BUILDER->getInt8Ty()),
+                        casted_ptr
+                    );
+                }
+
+                if (oper == "mem-write") {
+                    LOG_DEBUG("Process memory write");
+
+                    auto ptr_exp = exp.list[1];
+                    auto value_exp = exp.list[2];
+                    auto* ptr_val = generate_expression(ptr_exp, env);
+                    auto* value_val = generate_expression(value_exp, env);
+
+                    // Преобразуем void* в указатель нужного типа
+                    auto* casted_ptr = m_IR_BUILDER->CreateBitCast(
+                        ptr_val,
+                        value_val->getType()->getPointerTo(),
+                        "cast_ptr"
+                    );
+                    m_IR_BUILDER->CreateStore(value_val, casted_ptr);
+                    return value_val;
+                }
+
+                if (oper == "mem-read") {
+                    LOG_DEBUG("Process memory read");
+
+                    auto ptr_exp = exp.list[1];
+                    auto type_exp = exp.list[2];
+                    auto* ptr_val = generate_expression(ptr_exp, env);
+                    auto* target_type = get_type(type_exp.string, "mem_read");
+
+                    // Преобразуем void* в указатель нужного типа
+                    auto* casted_ptr = m_IR_BUILDER->CreateBitCast(
+                        ptr_val,
+                        target_type->getPointerTo(),
+                        "cast_ptr"
+                    );
+                    return m_IR_BUILDER->CreateLoad(target_type, casted_ptr, "load");
+                }
+
+                if (oper == "mem-ptr") {
+                    LOG_DEBUG("Process get pointer");
+
+                    auto var_name = exp.list[1].string;
+                    auto* var_ptr = env->lookup_by_name(var_name);
+
+                    // Приводим указатель к общему типу void*
+                    return m_IR_BUILDER->CreateBitCast(
+                        var_ptr,
+                        m_IR_BUILDER->getInt8Ty()->getPointerTo(),
+                        "to_void_ptr"
+                    );
+                }
+
+                if (oper == "mem-deref") {
+                    LOG_DEBUG("Process pointer dereference");
+
+                    auto ptr_exp = exp.list[1];
+                    auto type_exp = exp.list[2];
+                    auto* ptr_val = generate_expression(ptr_exp, env);
+                    auto* target_type = get_type(type_exp.string, "mem_deref");
+
+                    // Преобразуем void* в указатель нужного типа
+                    auto* casted_ptr = m_IR_BUILDER->CreateBitCast(
+                        ptr_val,
+                        target_type->getPointerTo(),
+                        "cast_ptr"
+                    );
+                    return m_IR_BUILDER->CreateLoad(target_type, casted_ptr, "deref");
                 }
 
                 if (oper == "index") {

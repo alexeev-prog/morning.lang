@@ -128,21 +128,15 @@ class MorningLanguageLLVM {
     std::map<std::string, llvm::ArrayType*> m_ARRAY_TYPES; ///< Map of array types
 
     /**
-    * @brief Generates IR for a foreach loop
-    *
-    * Handles the syntax: [foreach (element array) body]
-    *
-    * 1. Evaluates the array expression
-    * 2. Gets array type and size
-    * 3. Creates index variable and element storage
-    * 4. Sets up loop blocks (condition, body, step, exit)
-    * 5. Handles break/continue within loop body
-    *
-    * @param exp Foreach expression AST
-    * @param env Current environment
-    * @return llvm::Value* Resulting LLVM value
-    */
-    auto generate_foreach(const Exp& exp, const env& env) -> llvm::Value*;
+     * @brief Get size of type in bytes
+     *
+     * @param type LLVM type
+     * @return uint64_t Size in bytes
+     */
+     auto get_type_size(llvm::Type* type) -> uint64_t {
+        llvm::DataLayout data_layout(m_MODULE.get());
+        return data_layout.getTypeAllocSize(type).getFixedValue();
+    }
 
     /**
      * @brief Configures target triple for generated module

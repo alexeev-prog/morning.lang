@@ -169,6 +169,58 @@ F --> G
 
 ## 💡 Language Highlights
 
+### 🧩 Low Level
+```morning
+// Allocate memory for an integer and store pointer in 'ptr'
+[var (ptr !ptr) (mem-alloc (sizeof !int))]
+[fprint "Memory allocated at: %p\n" ptr]
+
+// Write value to allocated memory
+[mem-write ptr 42]
+[fprint "Value written: %d\n" 42]
+
+// Read value back from memory
+[var (value !int) (mem-read ptr !int)]
+[fprint "Value read: %d\n" value]
+
+// Pointer operations
+[var (x !int) 100]
+[var (x_ptr !ptr) (mem-ptr x)] // Get address of variable 'x'
+[fprint "Address of x: %p\n" x_ptr]
+
+// Dereference pointer
+[var (x_val !int) (mem-deref x_ptr !int)]
+[fprint "Value of x via pointer: %d\n" x_val]
+
+// Modify value through pointer
+[mem-write x_ptr 200]
+[fprint "New value of x: %d\n" x]
+
+// Free allocated memory
+[mem-free ptr]
+[fprint "Memory freed\n"]
+
+// Bit manipulation
+[var (flags !int) 0]
+[set flags (bit-or flags 0b1010)]  // Set bits (bitwise OR)
+[fprint "Flags: %b\n" flags]
+
+// Bit check
+//[check (bit-and flags 0b0010)
+//    [fprint "Bit 2 is set!\n"]
+//    [fprint "Bit 2 is not set!\n"]]
+
+// Raw byte operations
+[var (buffer !ptr) (mem-alloc 4)] // Allocate 4-byte buffer
+[byte-write buffer 0x41]     // Write 'A' (ASCII 0x41)
+
+// Read bytes
+[fprint "Byte 0: %c\n" (byte-read buffer)]
+
+// Size-constrained type declaration
+[var (size_checked_int !size:8!int) 0] // 8-bit integer
+```
+
 ### 🧩 Arrays
 ```morning
 [var (arr !array<!int,3>) (array 1 2 3)]

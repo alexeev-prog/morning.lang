@@ -49,3 +49,4 @@ venv/
 .venv/
 pyproject.toml
 program
+*.morning

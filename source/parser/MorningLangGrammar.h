@@ -602,7 +602,7 @@
           {std::regex(R"(^[-+]?\d+)"), &_lexRule15},
           {std::regex(R"(^\s+)"), &_lexRule16},
           {std::regex(R"(^"(\\.|[^"\\])*")"), &_lexRule17},
-          {std::regex(R"(^[\w\-+*=!<>/,#]+)"), &_lexRule18}}};
+          {std::regex(R"(^[\w\-+*=!<>/,:;#]+)"), &_lexRule18}}};
      inline std::map<TokenizerState, std::vector<size_t>> Tokenizer::lexRulesByStartConditions_ = {
          {TokenizerState::INITIAL, {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17}}};
 
