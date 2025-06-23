@@ -5,10 +5,12 @@
 #include <regex>
 #include <string>
 #include <system_error>
+#include <utility>
 #include <vector>
 
 #include "morningllvm.hpp"
 
+#include <boost/algorithm/string.hpp>
 #include <llvm/IR/BasicBlock.h>
 #include <llvm/IR/Constant.h>
 #include <llvm/IR/Constants.h>
@@ -23,7 +25,6 @@
 #include <llvm/Support/Alignment.h>
 #include <llvm/Support/Casting.h>
 #include <llvm/Support/raw_ostream.h>
-#include <boost/algorithm/string.hpp>
 
 #include "env.h"
 #include "logger.hpp"
@@ -47,10 +48,10 @@ namespace {
         return tabed;
     }
 
-    auto typeToString(llvm::Type* type) -> std::string {
-        std::string typeStr;
+    auto type_to_string(llvm::Type* type) -> std::string {
+        std::string type_str;
 
-        llvm::raw_string_ostream rso(typeStr);
+        llvm::raw_string_ostream rso(type_str);
 
         type->print(rso);
 
@@ -75,28 +76,6 @@ namespace {
             return "!frac";
         }
 
-        return value;
-    }
-
-    /**
-     * @brief Perform implicit type conversion (int -> frac)
-     *
-     * @param value Value to convert
-     * @param targetType Target type
-     * @param builder IR builder
-     * @return llvm::Value* Converted value or original if no conversion needed
-     */
-    auto implicit_cast(llvm::Value* value, llvm::Type* targetType, llvm::IRBuilder<>& builder) -> llvm::Value* {
-        if (value->getType() == targetType) {
-            return value;
-        }
-
-        // int -> frac (double)
-        if (value->getType()->isIntegerTy() && targetType->isDoubleTy()) {
-            return builder.CreateSIToFP(value, targetType, "castinttofrac");
-        }
-
-        // For other types, return original (will throw error later)
         return value;
     }
 
@@ -157,7 +136,8 @@ namespace {
                 auto str1 = "\"" + exp.string + "\"";
                 boost::replace_all(str1, "\n", "\\n");
                 return str1;
-            } default:
+            }
+            default:
                 return "<?>";
         }
     }
@@ -175,7 +155,9 @@ namespace {
             return;
         }
 
-        if (exp.type == ExpType::LIST || exp.type == ExpType::SYMBOL || exp.type == ExpType::NUMBER || exp.type == ExpType::FRACTIONAL || exp.type == ExpType::STRING) {
+        if (exp.type == ExpType::LIST || exp.type == ExpType::SYMBOL || exp.type == ExpType::NUMBER
+            || exp.type == ExpType::FRACTIONAL || exp.type == ExpType::STRING)
+        {
             if (exp.type == ExpType::LIST && !exp.list.empty()) {
                 if (exp.list[0].type == ExpType::SYMBOL) {
                     context = exp.list[0].string;
@@ -216,7 +198,26 @@ MorningLanguageLLVM::MorningLanguageLLVM()
     setup_global_environment();
 }
 
-auto MorningLanguageLLVM::execute(const std::string& program, const std::string& output_base) -> int {
+auto MorningLanguageLLVM::implicit_cast(llvm::Value* value,
+                                        llvm::Type* target_type,
+                                        llvm::IRBuilder<>& builder) -> llvm::Value* {
+    if (value->getType() == target_type) {
+        return value;
+    }
+
+    // int -> frac (double)
+    if (value->getType()->isIntegerTy() && target_type->isDoubleTy()) {
+        LOG_WARN("Implicit cast from !int -> !frac");
+
+        return builder.CreateSIToFP(value, target_type, "castinttofrac");
+    }
+
+    // For other types, return original (will throw error later)
+    return value;
+}
+
+auto MorningLanguageLLVM::execute(const std::string& program,
+                                  const std::string& output_base) -> int {
     LOG_TRACE
 
     auto ast = m_PARSER->parse("[scope " + program + "]");
@@ -307,14 +308,89 @@ auto MorningLanguageLLVM::get_type(const std::string& type_string, const std::st
     }
 
     if (type_string == "!bool") {
-        return m_IR_BUILDER->getInt64Ty();
+        return m_IR_BUILDER->getInt8Ty();
     }
 
     if (type_string == "!none") {
         return m_IR_BUILDER->getVoidTy();
     }
 
-    LOG_WARN("Variable \"%s\" does not have typing: set by auto (!int)", var_name.c_str());
+    if (type_string.find("!ptr<") == 0) {
+        size_t start = type_string.find('<');
+        size_t end = type_string.rfind('>');
+        if (end == std::string::npos) {
+            LOG_CRITICAL("Invalid pointer type for '%s': missing '>'", var_name.c_str());
+        }
+
+        std::string inner = type_string.substr(start + 1, end - start - 1);
+        llvm::Type* pointee_type = get_type(inner, var_name);
+        return llvm::PointerType::get(*m_CONTEXT, 0);
+    }
+
+    if (type_string.find("!array<") == 0) {
+        size_t start = type_string.find('<');
+        size_t end = type_string.rfind('>');
+        if (end == std::string::npos) {
+            LOG_CRITICAL("Invalid array type for '%s': missing '>'", var_name.c_str());
+        }
+
+        std::string inner = type_string.substr(start + 1, end - start - 1);
+
+        // Parse with nested type support
+        int bracket_level = 0;
+        size_t comma_pos = std::string::npos;
+        for (size_t i = 0; i < inner.length(); i++) {
+            char c = inner[i];
+            if (c == '<') {
+                bracket_level++;
+            } else if (c == '>') {
+                bracket_level--;
+            } else if (c == ',' && bracket_level == 0) {
+                comma_pos = i;
+                break;
+            }
+        }
+
+        if (comma_pos == std::string::npos) {
+            LOG_CRITICAL("Invalid array type for '%s': expected comma", var_name.c_str());
+        }
+
+        // Extract element type and size
+        std::string element_type_str = inner.substr(0, comma_pos);
+        std::string size_str = inner.substr(comma_pos + 1);
+
+        // Trim whitespace
+        auto trim = [](std::string& s) {
+            s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](int ch) {
+                return !std::isspace(ch);
+            }));
+            s.erase(std::find_if(s.rbegin(), s.rend(), [](int ch) {
+                return !std::isspace(ch);
+            }).base(), s.end());
+        };
+
+        trim(element_type_str);
+        trim(size_str);
+
+        // Parse size
+        int size;
+        try {
+            size = std::stoi(size_str);
+            if (size <= 0) {
+                LOG_CRITICAL("Invalid array size for '%s': must be positive integer", var_name.c_str());
+            }
+        } catch (...) {
+            LOG_CRITICAL("Invalid array size for '%s': not a number", var_name.c_str());
+        }
+
+        // Recursively get element type
+        llvm::Type* element_type = get_type(element_type_str, var_name);
+        return llvm::ArrayType::get(element_type, size);
+    }
+
+    LOG_WARN("Variable \"%s\" does not have typing: set by auto (!int)",
+            var_name.c_str());
+
     return m_IR_BUILDER->getInt64Ty();
 }
 
@@ -404,7 +480,7 @@ auto MorningLanguageLLVM::generate_expression(const Exp& exp, const env& env) ->
         }
         case ExpType::SYMBOL:
             if (exp.string == "true" || exp.string == "false") {
-                return m_IR_BUILDER->getInt64(static_cast<uint64_t>(exp.string == "true"));
+                return m_IR_BUILDER->getInt8(static_cast<uint8_t>(exp.string == "true"));
             } else {
                 auto var_name = exp.string;
                 auto* value = env->lookup_by_name(var_name);
@@ -438,32 +514,48 @@ auto MorningLanguageLLVM::generate_expression(const Exp& exp, const env& env) ->
                 auto oper = tag.string;
 
                 if (oper == "+" || oper == "-" || oper == "*" || oper == "/") {
-                    auto left = generate_expression(exp.list[1], env);
-                    auto right = generate_expression(exp.list[2], env);
+                    auto* left = generate_expression(exp.list[1], env);
+                    auto* right = generate_expression(exp.list[2], env);
 
                     // Determine common type
-                    llvm::Type* targetType = left->getType();
+                    llvm::Type* target_type = left->getType();
                     if (left->getType()->isIntegerTy() && right->getType()->isDoubleTy()) {
-                        targetType = right->getType();
+                        target_type = right->getType();
                     } else if (left->getType()->isDoubleTy() && right->getType()->isIntegerTy()) {
-                        targetType = left->getType();
+                        target_type = left->getType();
                     }
 
                     // Apply implicit casting
-                    left = implicit_cast(left, targetType, *m_IR_BUILDER);
-                    right = implicit_cast(right, targetType, *m_IR_BUILDER);
+                    left = implicit_cast(left, target_type, *m_IR_BUILDER);
+                    right = implicit_cast(right, target_type, *m_IR_BUILDER);
 
                     // Generate operations
-                    if (targetType->isDoubleTy()) {
-                        if (oper == "+") return m_IR_BUILDER->CreateFAdd(left, right, "__tmpfadd__");
-                        if (oper == "-") return m_IR_BUILDER->CreateFSub(left, right, "__tmpfsub__");
-                        if (oper == "*") return m_IR_BUILDER->CreateFMul(left, right, "__tmpfmul__");
-                        if (oper == "/") return m_IR_BUILDER->CreateFDiv(left, right, "__tmpfdiv__");
+                    if (target_type->isDoubleTy()) {
+                        if (oper == "+") {
+                            return m_IR_BUILDER->CreateFAdd(left, right, "__tmpfadd__");
+                        }
+                        if (oper == "-") {
+                            return m_IR_BUILDER->CreateFSub(left, right, "__tmpfsub__");
+                        }
+                        if (oper == "*") {
+                            return m_IR_BUILDER->CreateFMul(left, right, "__tmpfmul__");
+                        }
+                        if (oper == "/") {
+                            return m_IR_BUILDER->CreateFDiv(left, right, "__tmpfdiv__");
+                        }
                     } else {
-                        if (oper == "+") return m_IR_BUILDER->CreateAdd(left, right, "__tmpadd__");
-                        if (oper == "-") return m_IR_BUILDER->CreateSub(left, right, "__tmpsub__");
-                        if (oper == "*") return m_IR_BUILDER->CreateMul(left, right, "__tmpmul__");
-                        if (oper == "/") return m_IR_BUILDER->CreateSDiv(left, right, "__tmpdiv__");
+                        if (oper == "+") {
+                            return m_IR_BUILDER->CreateAdd(left, right, "__tmpadd__");
+                        }
+                        if (oper == "-") {
+                            return m_IR_BUILDER->CreateSub(left, right, "__tmpsub__");
+                        }
+                        if (oper == "*") {
+                            return m_IR_BUILDER->CreateMul(left, right, "__tmpmul__");
+                        }
+                        if (oper == "/") {
+                            return m_IR_BUILDER->CreateSDiv(left, right, "__tmpdiv__");
+                        }
                     }
                 }
 
@@ -488,6 +580,91 @@ auto MorningLanguageLLVM::generate_expression(const Exp& exp, const env& env) ->
                 } else if (oper == "<=" || oper == "__CMPLE__") {
                     GEN_BINARY_OP(CreateICmpULE, "__tmpcmp__");
                 }
+
+                if (oper == "array") {
+                    LOG_DEBUG("Process array creation");
+
+                    // Handle nested arrays
+                    bool is_nested_array = false;
+                    llvm::Type* element_type = nullptr;
+                    std::vector<llvm::Constant*> elements;
+
+                    for (size_t i = 1; i < exp.list.size(); i++) {
+                        auto* element_val = generate_expression(exp.list[i], env);
+
+                        if (auto* constant = llvm::dyn_cast<llvm::Constant>(element_val)) {
+                            // First element determines type
+                            if (element_type == nullptr) {
+                                element_type = element_val->getType();
+                                is_nested_array = element_type->isArrayTy();
+                            }
+
+                            // Validate type consistency
+                            if (element_val->getType() != element_type) {
+                                LOG_CRITICAL("Array element type mismatch at index %zu", i - 1);
+                            }
+
+                            elements.push_back(constant);
+                        } else {
+                            LOG_CRITICAL("Array element must be constant expression");
+                        }
+                    }
+
+                    if (elements.empty()) {
+                        LOG_CRITICAL("Array cannot be empty");
+                    }
+
+                    // For nested arrays, use the first element's type
+                    if (is_nested_array) {
+                        return llvm::ConstantArray::get(
+                            llvm::ArrayType::get(element_type, elements.size()),
+                            elements
+                        );
+                    }
+
+                    // For simple arrays
+                    return llvm::ConstantArray::get(
+                        llvm::ArrayType::get(element_type, elements.size()),
+                        elements
+                    );
+                }
+
+                if (oper == "index") {
+                    LOG_DEBUG("Process array indexing");
+
+                    if (exp.list.size() != 3) {
+                      LOG_CRITICAL("index operation requires 2 arguments");
+                    }
+
+                    // First argument must be symbol (array name)
+                    if (exp.list[1].type != ExpType::SYMBOL) {
+                      LOG_CRITICAL("index: first argument must be array name");
+                    }
+
+                    const std::string& array_name = exp.list[1].string;
+                    auto array_type_it = m_ARRAY_TYPES.find(array_name);
+                    if (array_type_it == m_ARRAY_TYPES.end()) {
+                      LOG_CRITICAL("Array '%s' not found", array_name.c_str());
+                    }
+
+                    llvm::ArrayType* array_type = array_type_it->second;
+                    llvm::Value* array_ptr = env->lookup_by_name(array_name);
+                    llvm::Value* index_val = generate_expression(exp.list[2], env);
+
+                    // Validate index type
+                    if (!index_val->getType()->isIntegerTy()) {
+                      LOG_CRITICAL("Array index must be integer type");
+                    }
+
+                    // Create GEP (getelementptr) for array element
+                    llvm::Value* zero = m_IR_BUILDER->getInt32(0);
+                    std::vector<llvm::Value*> indices = {zero, index_val};
+                    llvm::Value* element_ptr = m_IR_BUILDER->CreateInBoundsGEP(
+                        array_type, array_ptr, indices, "elementptr");
+
+                    return m_IR_BUILDER->CreateLoad(
+                        array_type->getElementType(), element_ptr, "loadarray");
+                  }
 
                 if (oper == "if") {
                     LOG_DEBUG("Process if-elif-else: %s", exp.list[1].string.c_str());
@@ -625,7 +802,7 @@ auto MorningLanguageLLVM::generate_expression(const Exp& exp, const env& env) ->
                 if (oper == "func") {
                     LOG_DEBUG("Process function: %s", exp.list[1].string.c_str());
 
-                    auto *fn = compile_function(exp, /* name */ exp.list[1].string, env);
+                    auto* fn = compile_function(exp, /* name */ exp.list[1].string, env);
                     env->define(exp.list[1].string, fn);
                     return fn;
                 }
@@ -792,6 +969,49 @@ auto MorningLanguageLLVM::generate_expression(const Exp& exp, const env& env) ->
                 }
 
                 if (oper == "set") {
+                    if (exp.list[1].type == ExpType::LIST &&
+                            !exp.list[1].list.empty() &&
+                            exp.list[1].list[0].string == "index") {
+                        const Exp& index_exp = exp.list[1];
+
+                        if (index_exp.list.size() != 3) {
+                            LOG_CRITICAL("index in set requires 2 arguments");
+                        }
+
+                        // First argument must be symbol (array name)
+                        if (index_exp.list[1].type != ExpType::SYMBOL) {
+                            LOG_CRITICAL("index: first argument must be array name");
+                        }
+
+                        const std::string& array_name = index_exp.list[1].string;
+                        auto array_type_it = m_ARRAY_TYPES.find(array_name);
+                        if (array_type_it == m_ARRAY_TYPES.end()) {
+                            LOG_CRITICAL("Array '%s' not found", array_name.c_str());
+                        }
+
+                        llvm::ArrayType* array_type = array_type_it->second;
+                        llvm::Value* array_ptr = env->lookup_by_name(array_name);
+                        llvm::Value* index_val = generate_expression(index_exp.list[2], env);
+                        llvm::Value* value = generate_expression(exp.list[2], env);
+
+                        // Validate index type
+                        if (!index_val->getType()->isIntegerTy()) {
+                            LOG_CRITICAL("Array index must be integer type");
+                        }
+
+                        // Create GEP (getelementptr) for array element
+                        llvm::Value* zero = m_IR_BUILDER->getInt32(0);
+                        std::vector<llvm::Value*> indices = {zero, index_val};
+                        llvm::Value* element_ptr = m_IR_BUILDER->CreateInBoundsGEP(
+                            array_type, array_ptr, indices, "setptr");
+
+                        // Cast value to element type if needed
+                        value = implicit_cast(value, array_type->getElementType(), *m_IR_BUILDER);
+
+                        m_IR_BUILDER->CreateStore(value, element_ptr);
+                        return value;
+                    }
+
                     auto var_name = exp.list[1].string;
 
                     LOG_DEBUG("Process set value to var: %s", var_name.c_str());
@@ -808,8 +1028,7 @@ auto MorningLanguageLLVM::generate_expression(const Exp& exp, const env& env) ->
                     llvm::Type* var_type = nullptr;
                     if (auto* alloca = llvm::dyn_cast<llvm::AllocaInst>(var_binding)) {
                         var_type = alloca->getAllocatedType();
-                    }
-                    else if (auto* global = llvm::dyn_cast<llvm::GlobalVariable>(var_binding)) {
+                    } else if (auto* global = llvm::dyn_cast<llvm::GlobalVariable>(var_binding)) {
                         var_type = global->getValueType();
                     }
 
@@ -818,12 +1037,11 @@ auto MorningLanguageLLVM::generate_expression(const Exp& exp, const env& env) ->
                         // Allow implicit int->frac conversion
                         if (value->getType()->isIntegerTy() && var_type->isDoubleTy()) {
                             value = m_IR_BUILDER->CreateSIToFP(value, var_type, "castset");
-                        }
-                        else {
+                        } else {
                             LOG_CRITICAL("Type mismatch for '%s': cannot assign %s to %s",
-                                var_name.c_str(),
-                                typeToString(value->getType()).c_str(),
-                                typeToString(var_type).c_str());
+                                         var_name.c_str(),
+                                         type_to_string(value->getType()).c_str(),
+                                         type_to_string(var_type).c_str());
                         }
                     }
 
@@ -846,17 +1064,20 @@ auto MorningLanguageLLVM::generate_expression(const Exp& exp, const env& env) ->
                     auto* init = generate_expression(exp.list[2], env);
                     auto* var_type = extract_var_type(var_name_declaration);
 
+                    if (llvm::isa<llvm::ArrayType>(var_type)) {
+                        m_ARRAY_TYPES[var_name] = llvm::cast<llvm::ArrayType>(var_type);
+                    }
+
                     // Validate type
                     if (init->getType() != var_type) {
                         // Allow implicit int->frac conversion
                         if (init->getType()->isIntegerTy() && var_type->isDoubleTy()) {
                             init = m_IR_BUILDER->CreateSIToFP(init, var_type, "castinit");
-                        }
-                        else {
+                        } else {
                             LOG_CRITICAL("Type mismatch for '%s': declared as %s but initialized with %s",
-                                var_name.c_str(),
-                                typeToString(var_type).c_str(),
-                                typeToString(init->getType()).c_str());
+                                         var_name.c_str(),
+                                         type_to_string(var_type).c_str(),
+                                         type_to_string(init->getType()).c_str());
                         }
                     }
 

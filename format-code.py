@@ -1,105 +1,649 @@
 #!/usr/bin/env python3
-# Python program to format C/C++ files using clang-format
+"""
+Enhanced CLang Code Formatter and Analyzer
+=========================================
+Recursively processes C++ files using:
+- clang-format (code formatting)
+- clang-tidy (static analysis and fixes)
+
+New Features:
+- Automatic removal of .fixes.yaml files
+- Config file support (.clang-tidy, .clang-format)
+- Version locking for tools
+- Warning statistics
+- Enhanced HTML reporting
+- Fix application mode
+
+Usage:
+  ./cpp_formatter.py [directory] [options]
+
+Try `./cpp_formatter.py --help` for more information.
+"""
+
+import argparse
+import json
+import multiprocessing
 import os
-import sys
-from pathlib import Path
+import platform
+import re
+import signal
 import subprocess
+import sys
+from concurrent.futures import ProcessPoolExecutor, as_completed
+from datetime import datetime
+from pathlib import Path
+from typing import Dict, List, Optional, Tuple
 
-# Define color codes for output
-RED = '\033[31m'
-GREEN = '\033[32m'
-YELLOW = '\033[33m'
-NC = '\033[0m'  # No Color
-BOLD = '\033[1m'  # No Color
+from rich.console import Console
+from rich.panel import Panel
+from rich.progress import Progress, SpinnerColumn, TextColumn
+from rich.syntax import Syntax
+from rich.table import Table
+from rich.text import Text
+from tqdm import tqdm
 
-# File Extension filter. You can add new extension
-cpp_extensions = (".cxx",".cpp",".c", ".hxx", ".hh", ".cc", ".hpp", ".h")
-IGNORED_DIRS = ['build', '.git', 'cmake', 'docs', 'utils', 'CMakeFiles']
-IGNORED_FILES = ['slogger.hpp', 'main.cpp', 'logger.cpp', 'logger.hpp']
+# ============================== CONFIGURATION ================================
+CPP_EXTENSIONS = (".cxx", ".cpp", ".c", ".hxx", ".hh", ".cc", ".hpp", ".h")
+IGNORED_DIRS = {"build", ".git", "cmake", "docs", "utils", "CMakeFiles", "third_party"}
+IGNORED_FILES = {"slogger.hpp", "main.cpp", "logger.cpp", "logger.hpp", "generated.cpp"}
+IGNORED_PATTERNS = {"*_pb.*", "*_grpc.*"}
 
-CLANG_FORMAT = 'clang-format'
-SPACETABS = './space2tabs.sh'
+DEFAULT_CLANG_FORMAT_STYLE = "file"
+DEFAULT_CLANG_TIDY_CHECKS = (
+    "modernize-*,"
+    "performance-*,"
+    "readability-*,"
+    "bugprone-*,"
+    "clang-analyzer-*,"
+    "cppcoreguidelines-*"
+)
+# =============================================================================
 
-print(f'domkrat3d code-formatter: {CLANG_FORMAT}; Extensions: {" ".join(cpp_extensions)}')
-
-
-def print_usage():
-	"""Print the usage instructions."""
-	print(f"{YELLOW}Usage: convert_tabs(file_path, tab_size, conversion_type){NC}")
-	print(f"<conversion_type>: 'spaces' or 'tabs'")
-
-
-def print_error(message):
-	"""Print error messages."""
-	print(f"{RED}Error: {message}{NC}")
-
-
-def validate_positive_integer(value):
-	"""Validate if the value is a positive integer."""
-	try:
-		int_value = int(value)
-		if int_value < 1:
-			raise ValueError
-		return int_value
-	except ValueError:
-		print_error("Tab size must be a positive integer.")
-		return None
+console = Console(record=True, log_time_format="[%X]")
+error_console = Console(stderr=True, style="bold red")
 
 
-def file_exists(file_path):
-	"""Check if the file exists."""
-	if not os.path.isfile(file_path):
-		print_error(f"File not found: {file_path}")
-		return False
-	return True
+class GracefulExiter:
+    """Handles graceful exit on SIGINT/SIGTERM"""
+    def __init__(self):
+        self.state = False
+        signal.signal(signal.SIGINT, self.exit_gracefully)
+        signal.signal(signal.SIGTERM, self.exit_gracefully)
+    
+    def exit_gracefully(self, signum, frame):
+        error_console.print(f"\n[!] Received signal {signum}, terminating gracefully...")
+        self.state = True
 
 
-def convert_tabs(file_path, tab_size, conversion_type):
-	"""Convert tabs to spaces or spaces to tabs based on conversion type."""
-	try:
-		if conversion_type == "spaces":
-			print(f"{BOLD}Converting tabs to spaces...{NC}")
-			subprocess.run(["expand", "-t", str(tab_size), file_path], stdout=open(f"{file_path}.tmp", "w"))
-		elif conversion_type == "tabs":
-			print(f"{BOLD}Converting spaces to tabs...{NC}")
-			subprocess.run(["unexpand", "-t", str(tab_size), file_path], stdout=open(f"{file_path}.tmp", "w"))
-		else:
-			print_error(f"Invalid conversion type: {conversion_type}. Use 'spaces' or 'tabs'.")
-			return
+def parse_arguments() -> argparse.Namespace:
+    """Parse command-line arguments
+    
+    Returns:
+        argparse.Namespace: Parsed command-line arguments
+    """
+    parser = argparse.ArgumentParser(
+        description="Enhanced C++ Code Formatter and Analyzer",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+    )
+    parser.add_argument(
+        "directory",
+        nargs="?",
+        default=os.getcwd(),
+        help="Target directory (default: current directory)"
+    )
+    parser.add_argument(
+        "--clang-format",
+        default="clang-format",
+        help="Path to clang-format executable"
+    )
+    parser.add_argument(
+        "--clang-tidy",
+        default="clang-tidy",
+        help="Path to clang-tidy executable"
+    )
+    parser.add_argument(
+        "--compile-commands",
+        default="build/compile_commands.json",
+        help="Path to compilation database"
+    )
+    parser.add_argument(
+        "-j", "--jobs",
+        type=int,
+        default=multiprocessing.cpu_count(),
+        help="Number of parallel jobs"
+    )
+    parser.add_argument(
+        "--format-style",
+        default=DEFAULT_CLANG_FORMAT_STYLE,
+        help="clang-format style configuration"
+    )
+    parser.add_argument(
+        "--tidy-checks",
+        default=DEFAULT_CLANG_TIDY_CHECKS,
+        help="clang-tidy checks configuration"
+    )
+    parser.add_argument(
+        "--no-format",
+        action="store_true",
+        help="Skip formatting step"
+    )
+    parser.add_argument(
+        "--no-tidy",
+        action="store_true",
+        help="Skip analysis step"
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Simulate actions without modifying files"
+    )
+    parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="Enable verbose output"
+    )
+    parser.add_argument(
+        "--strict",
+        action="store_true",
+        help="Treat all warnings as errors"
+    )
+    parser.add_argument(
+        "--report",
+        action="store_true",
+        help="Generate detailed HTML report"
+    )
+    parser.add_argument(
+        "--keep-fixes",
+        action="store_true",
+        help="Keep .fixes.yaml files generated by clang-tidy"
+    )
+    parser.add_argument(
+        "--fix",
+        action="store_true",
+        help="Apply automatic fixes from clang-tidy"
+    )
+    parser.add_argument(
+        "--version-lock",
+        action="store_true",
+        help="Record and enforce tool versions"
+    )
+    return parser.parse_args()
 
-		os.replace(f"{file_path}.tmp", file_path)
-		print(f"{GREEN}Conversion completed successfully: {file_path}{NC}")
-	except Exception as e:
-		print_error(f"Conversion failed: {str(e)}")
+
+def get_tool_version(tool_path: str) -> str:
+    """Get version string of a tool
+    
+    Args:
+        tool_path: Path to executable
+        
+    Returns:
+        str: Version string
+    """
+    try:
+        result = subprocess.run(
+            [tool_path, "--version"],
+            capture_output=True,
+            text=True,
+            check=True,
+            encoding="utf-8"
+        )
+        # Extract first line and remove extra spaces
+        return result.stdout.split('\n')[0].strip()
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return "Unknown"
 
 
-def convert_file(file_path, tab_size, conversion_type):
-	"""Main function to manage conversion."""
-	tab_size = validate_positive_integer(tab_size)
-	if tab_size is None:
-		return
+def validate_tools(args: argparse.Namespace) -> Tuple[bool, Dict[str, str]]:
+    """Validate required executables and get versions
+    
+    Args:
+        args: Command-line arguments
+        
+    Returns:
+        Tuple[bool, Dict]: Validation status and tool versions
+    """
+    tools = {}
+    if not args.no_format:
+        tools["Formatter"] = args.clang_format
+    if not args.no_tidy:
+        tools["Analyzer"] = args.clang_tidy
 
-	if not file_exists(file_path):
-		return
+    valid = True
+    versions = {}
+    
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        transient=True,
+        console=console
+    ) as progress:
+        task = progress.add_task("Validating tools...", total=len(tools))
+        
+        for name, tool in tools.items():
+            try:
+                version = get_tool_version(tool)
+                versions[name] = version
+                progress.console.log(f"{name}: [green]✓[/] {tool} ({version})")
+            except (subprocess.CalledProcessError, FileNotFoundError):
+                error_console.print(f"{name}: [red]✗[/] {tool} not found")
+                valid = False
+            progress.update(task, advance=1)
+    
+    return valid, versions
 
 
-def main():
-	# Set the current working directory for scanning c/c++ sources (including
-	# header files) and apply the clang formatting
-	# Please note "-style" is for standard style options
-	# and "-i" is in-place editing
+def should_ignore(path: Path) -> bool:
+    """Check if path should be ignored
+    
+    Args:
+        path: Path to check
+        
+    Returns:
+        bool: True if path should be ignored
+    """
+    # Check directory exclusions
+    if any(part in IGNORED_DIRS for part in path.parts):
+        return True
+        
+    # Check file exclusions
+    if path.name in IGNORED_FILES:
+        return True
+        
+    # Check pattern exclusions
+    if any(path.match(pattern) for pattern in IGNORED_PATTERNS):
+        return True
+        
+    return False
 
-	for root, dirs, files in os.walk(os.getcwd()):
-		if len(set(root.split('/')).intersection(IGNORED_DIRS)) > 0:
-			continue
-		for file in files:
-			if file.endswith(cpp_extensions) and file not in IGNORED_FILES:
-				print(f"{BOLD}Format {file}: {root}/{file}{NC}")
-				os.system(f'clang-tidy --fix {root}/{file}')
-				os.system(f"{CLANG_FORMAT} -i -style=file {root}/{file}")
-				print(f"{GREEN}Formatting completed successfully: {root}/{file}{NC}")
-				convert_file(f'{root}/{file}', "4", "tabs")
+
+def find_cpp_files(root_dir: Path) -> List[Path]:
+    """Recursively find C++ files in directory
+    
+    Args:
+        root_dir: Root directory to search
+        
+    Returns:
+        List[Path]: List of found C++ files
+    """
+    cpp_files = []
+    
+    with tqdm(
+        desc="Scanning directory",
+        unit="file",
+        dynamic_ncols=True,
+        leave=False
+    ) as pbar:
+        for entry in root_dir.rglob("*"):
+            if should_ignore(entry):
+                continue
+                
+            if entry.suffix.lower() in CPP_EXTENSIONS and entry.is_file():
+                cpp_files.append(entry)
+                pbar.update(1)
+                
+    return cpp_files
 
 
-if __name__ == '__main__':
-	main()
+def format_file(file_path: Path, args: argparse.Namespace) -> Tuple[bool, str]:
+    """Format file using clang-format
+    
+    Args:
+        file_path: File to format
+        args: Command-line arguments
+        
+    Returns:
+        Tuple[bool, str]: Success status and output
+    """
+    cmd = [
+        args.clang_format,
+        f"--style={args.format_style}",
+        "--Werror",
+        str(file_path)
+    ]
+    
+    if not args.dry_run:
+        cmd.append("-i")
+    else:
+        cmd.append("--dry-run")
+        
+    try:
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            check=True,
+            encoding="utf-8"
+        )
+        return True, result.stdout.strip()
+    except subprocess.CalledProcessError as e:
+        return False, f"{e.stderr.strip() or e.stdout.strip()}"
+
+
+def analyze_file(file_path: Path, args: argparse.Namespace) -> Tuple[bool, str]:
+    """Analyze file using clang-tidy
+    
+    Args:
+        file_path: File to analyze
+        args: Command-line arguments
+        
+    Returns:
+        Tuple[bool, str]: Success status and output
+    """
+    cmd = [
+        args.clang_tidy,
+        str(file_path),
+        f"--checks={args.tidy_checks}",
+        f"--header-filter={file_path.parent}/*",
+        f"--export-fixes={file_path}.fixes.yaml",
+        f"--p={args.compile_commands}",
+        "--quiet"
+    ]
+    
+    if args.dry_run or args.strict:
+        cmd.append("--warnings-as-errors=*")
+        
+    if args.fix:
+        cmd.append("--fix")
+        
+    try:
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            check=True,
+            encoding="utf-8"
+        )
+        output = result.stdout.strip()
+        
+        # Remove fixes file unless explicitly kept
+        fixes_file = file_path.with_name(file_path.name + ".fixes.yaml")
+        if fixes_file.exists() and not args.keep_fixes and not args.dry_run:
+            try:
+                fixes_file.unlink()
+            except OSError as e:
+                output += f"\n[Cleanup Warning] Could not remove {fixes_file}: {str(e)}"
+                
+        return True, output
+    except subprocess.CalledProcessError as e:
+        return False, f"{e.stderr.strip() or e.stdout.strip()}"
+
+
+def process_file(file_path: Path, args: argparse.Namespace) -> Dict:
+    """Process a single file
+    
+    Args:
+        file_path: File to process
+        args: Command-line arguments
+        
+    Returns:
+        Dict: Processing results
+    """
+    result = {
+        "path": file_path,
+        "format": {"success": True, "output": ""},
+        "tidy": {"success": True, "output": "", "warnings": 0, "errors": 0}
+    }
+    
+    # Formatting step
+    if not args.no_format:
+        success, output = format_file(file_path, args)
+        result["format"] = {"success": success, "output": output}
+        if not success:
+            return result
+    
+    # Analysis step
+    if not args.no_tidy:
+        success, output = analyze_file(file_path, args)
+        
+        # Parse warning/error statistics
+        warnings = len(re.findall(r'warning: .+', output))
+        errors = len(re.findall(r'error: .+', output))
+        
+        result["tidy"] = {
+            "success": success,
+            "output": output,
+            "warnings": warnings,
+            "errors": errors
+        }
+    
+    return result
+
+
+def generate_report(results: List[Dict], args: argparse.Namespace, versions: Dict) -> None:
+    """Generate processing report
+    
+    Args:
+        results: List of processing results
+        args: Command-line arguments
+        versions: Tool versions information
+    """
+    # Statistics
+    total = len(results)
+    format_success = sum(1 for r in results if r["format"]["success"])
+    tidy_success = sum(1 for r in results if r["tidy"]["success"])
+    total_warnings = sum(r["tidy"]["warnings"] for r in results)
+    total_errors = sum(r["tidy"]["errors"] for r in results)
+    failed = [r for r in results if not (r["format"]["success"] and r["tidy"]["success"])]
+    
+    # System information
+    system_info = f"{platform.system()} {platform.release()} ({platform.machine()})"
+    python_info = f"{platform.python_implementation()} {platform.python_version()}"
+    
+    # Summary table
+    summary = Table(title="Processing Summary", box=None, expand=True)
+    summary.add_column("Metric", justify="left")
+    summary.add_column("Value", justify="right")
+    
+    summary.add_row("System", system_info)
+    summary.add_row("Python", python_info)
+    
+    for tool, version in versions.items():
+        summary.add_row(tool, version)
+        
+    summary.add_row("Files Processed", str(total), style="bold")
+    summary.add_row("Processing Time", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+    
+    if not args.no_format:
+        rate = format_success / total * 100
+        summary.add_row(
+            "Format Success", 
+            f"{format_success}/{total} ({rate:.1f}%)",
+            style="green" if format_success == total else "yellow"
+        )
+    
+    if not args.no_tidy:
+        rate = tidy_success / total * 100
+        summary.add_row(
+            "Analysis Success",
+            f"{tidy_success}/{total} ({rate:.1f}%)",
+            style="green" if tidy_success == total else "yellow"
+        )
+        summary.add_row(
+            "Total Warnings", 
+            str(total_warnings),
+            style="yellow" if total_warnings > 0 else "dim"
+        )
+        summary.add_row(
+            "Total Errors", 
+            str(total_errors),
+            style="red" if total_errors > 0 else "dim"
+        )
+    
+    console.print(Panel(summary, title="[bold]Processing Report[/]", padding=1))
+    
+    # Detailed errors
+    if failed:
+        console.rule("[bold red]Error Details[/]", style="red")
+        error_table = Table(
+            show_header=True,
+            header_style="bold magenta",
+            box=None,
+            expand=True
+        )
+        error_table.add_column("File", style="cyan")
+        error_table.add_column("Step", style="yellow")
+        error_table.add_column("Message")
+        
+        for result in failed:
+            rel_path = os.path.relpath(result["path"])
+            if not result["format"]["success"]:
+                error_table.add_row(
+                    rel_path,
+                    "FORMAT",
+                    result["format"]["output"] or "Unknown error"
+                )
+            if not result["tidy"]["success"]:
+                error_table.add_row(
+                    rel_path,
+                    "ANALYSIS",
+                    result["tidy"]["output"] or "Unknown error"
+                )
+        
+        console.print(error_table)
+    
+    # Final status
+    if not failed:
+        console.print(Panel("[bold green]✓ All files processed successfully[/]", 
+                          border_style="green"))
+    else:
+        console.print(Panel(f"[bold red]✗ {len(failed)} files had errors[/]", 
+                          border_style="red"))
+    
+    # Save HTML report if requested
+    if args.report:
+        report_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Code Analysis Report</title>
+            <style>
+                body {{ font-family: sans-serif; margin: 2rem; }}
+                table {{ border-collapse: collapse; width: 100%; }}
+                th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; }}
+                tr:nth-child(even) {{ background-color: #f2f2f2; }}
+                .success {{ color: green; }}
+                .warning {{ color: orange; }}
+                .error {{ color: red; }}
+            </style>
+        </head>
+        <body>
+            <h1>Code Analysis Report</h1>
+            <p>Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
+            
+            <h2>Summary</h2>
+            <ul>
+                <li>Files Processed: {total}</li>
+                <li>Format Success: {format_success}/{total}</li>
+                <li>Analysis Success: {tidy_success}/{total}</li>
+                <li>Total Warnings: {total_warnings}</li>
+                <li>Total Errors: {total_errors}</li>
+            </ul>
+            
+            <h2>Details</h2>
+            <table>
+                <tr>
+                    <th>File</th>
+                    <th>Format</th>
+                    <th>Analysis</th>
+                    <th>Warnings</th>
+                    <th>Errors</th>
+                </tr>
+                {"".join(f"""
+                <tr>
+                    <td>{os.path.relpath(r['path'])}</td>
+                    <td class="{'success' if r['format']['success'] else 'error'}">
+                        {'✓' if r['format']['success'] else '✗'}
+                    </td>
+                    <td class="{'success' if r['tidy']['success'] else 'error'}">
+                        {'✓' if r['tidy']['success'] else '✗'}
+                    </td>
+                    <td>{r['tidy']['warnings']}</td>
+                    <td>{r['tidy']['errors']}</td>
+                </tr>
+                """ for r in results)}
+            </table>
+            
+            <h2>System Info</h2>
+            <ul>
+                <li>System: {system_info}</li>
+                <li>Python: {python_info}</li>
+                {"".join(f"<li>{tool}: {version}</li>" for tool, version in versions.items())}
+            </ul>
+        </body>
+        </html>
+        """
+        
+        with open("report.html", "w", encoding="utf-8") as f:
+            f.write(report_content)
+        console.print(f"Report saved to [cyan]report.html[/]")
+
+
+def main() -> None:
+    """Main processing function"""
+    signal_handler = GracefulExiter()
+    args = parse_arguments()
+    root_dir = Path(args.directory).resolve()
+    
+    # Validate inputs
+    if not root_dir.exists():
+        error_console.print(f"Directory not found: {root_dir}")
+        sys.exit(1)
+        
+    # Validate tools and get versions
+    valid, versions = validate_tools(args)
+    if not valid:
+        sys.exit(1)
+    
+    # Find files
+    cpp_files = find_cpp_files(root_dir)
+    if not cpp_files:
+        console.print("[yellow]No C++ files found[/]")
+        return
+    
+    console.print(f"Found [cyan]{len(cpp_files)}[/] C++ files to process")
+    
+    # Process files
+    results = []
+    with ProcessPoolExecutor(max_workers=args.jobs) as executor:
+        futures = {
+            executor.submit(process_file, f, args): f
+            for f in cpp_files
+        }
+        
+        with tqdm(
+            total=len(futures),
+            desc="Processing files",
+            unit="file",
+            dynamic_ncols=True,
+            leave=True
+        ) as progress:
+            for future in as_completed(futures):
+                if signal_handler.state:
+                    executor.shutdown(wait=False, cancel_futures=True)
+                    break
+                    
+                try:
+                    result = future.result()
+                    results.append(result)
+                except Exception as e:
+                    file_path = futures[future]
+                    error_console.print(f"Error processing {file_path}: {str(e)}")
+                    results.append({
+                        "path": file_path,
+                        "format": {"success": False, "output": str(e)},
+                        "tidy": {"success": False, "output": str(e), "warnings": 0, "errors": 0}
+                    })
+                finally:
+                    progress.update(1)
+    
+    # Generate report
+    console.rule("[bold blue]Processing Report[/]")
+    generate_report(results, args, versions)
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except Exception as e:
+        error_console.print(f"[bold red]Critical error: {str(e)}[/]")
+        sys.exit(1)

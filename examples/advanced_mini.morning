@@ -40,3 +40,7 @@
 )]
 
 (fprint "Factorial of 5: %d\n" (factorial 5))
+
+[func example ((first !int) (second !int)) -> !int (+ first (* second first))]
+
+(fprint "Example: %d\n" (example 3 5))

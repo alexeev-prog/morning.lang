@@ -12,6 +12,7 @@ let
     libffi
     stb
     entt
+    ncurses
     gcc
     lld
     bolt
@@ -52,7 +53,7 @@ pkgs.mkShell {
     # Uncomment if you want install syntax-cli
 	# npm config set prefix ./npm-packages/
 	# npm install -g syntax-cli
-    export PATH="./npm-packages/bin:$PATH"
-    export NODE_PATH="./npm-packages/lib/node_modules"
+    # export PATH="./npm-packages/bin:$PATH"
+    # export NODE_PATH="./npm-packages/lib/node_modules"
   '';
 }

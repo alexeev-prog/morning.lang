@@ -92,7 +92,8 @@ class MorningLanguageLLVM {
      * @param output_base Base filename for output files (without extension)
      * @return int Status code (0 = success)
      */
-    auto execute(const std::string& program, const std::string& output_base) -> int;
+    auto execute(const std::string& program,
+                 const std::string& output_base) -> int;
 
   private:
     llvm::Function* m_ACTIVE_FUNCTION {};    ///< Current function being generated
@@ -105,6 +106,35 @@ class MorningLanguageLLVM {
     std::unique_ptr<llvm::IRBuilder<>> m_VARS_BUILDER;    ///< Builder for variable allocation
     std::map<std::string, llvm::Value*> m_CONSTANTS;    ///< Map of constant variables
     std::map<std::string, llvm::Value*> m_VARIABLES;    ///< Map of variables
+    std::map<std::string, llvm::ArrayType*> m_ARRAY_TYPES; ///< Map of array types
+
+    /**
+    * @brief Generates IR for a foreach loop
+    *
+    * Handles the syntax: [foreach (element array) body]
+    *
+    * 1. Evaluates the array expression
+    * 2. Gets array type and size
+    * 3. Creates index variable and element storage
+    * 4. Sets up loop blocks (condition, body, step, exit)
+    * 5. Handles break/continue within loop body
+    *
+    * @param exp Foreach expression AST
+    * @param env Current environment
+    * @return llvm::Value* Resulting LLVM value
+    */
+    auto generate_foreach(const Exp& exp, const env& env) -> llvm::Value*;
+
+    /**
+     * @brief Perform implicit type conversion (int -> frac)
+     *
+     * @param value Value to convert
+     * @param target_type Target type
+     * @param builder IR builder
+     * @return llvm::Value* Converted value or original if no conversion needed
+     */
+    auto implicit_cast(llvm::Value* value, llvm::Type* target_type, llvm::IRBuilder<>& builder)
+        -> llvm::Value*;
 
     /**
      * @brief Configures target triple for generated module

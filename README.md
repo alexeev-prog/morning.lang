@@ -44,16 +44,27 @@ We have VS Code extension for code highlight and snippets. [Extension here](http
 
 ![alt text](https://raw.githubusercontent.com/alexeev-prog/morning-vscode-ext/refs/heads/main/image.png)
 
+## Standards
+For see Morning Standards, see [morning-standards](https://github.com/alexeev-prog/morning-standards).
+
+Last standards:
+
+ + MCG-1 (Morning Coding Guidelines 1). [Read here](https://github.com/alexeev-prog/morning-standards/blob/main/standards/MCG1/index.md).
+
 ## Usage
 
 ```
-Usage: morningllvm [options]
+Usage: morninglang [options]
+
+MorningLLVM - Compiler for the Morning programming language
 
 Options:
-    -e, --expression  Expression to parse
-    -f, --file        File to parse
-    --lint            File to lint
-    -o, --output      Output binary name
+  -h, --help                     Print this help message
+  -e, --expression <expr>        Expression to parse
+  -f, --file <file>              File to parse
+  --lint <file>                  File to lint
+  -o, --output <name>            Output binary name
+  -k, --keep                     Keep temporary files
 ```
 
 ## Example
@@ -91,10 +102,6 @@ Options:
 
 [fprint "sum 100 1: %d\n\n" (sum 100 1)]
 ```
-
----
-
-Read our [SHORT GUIDELINES](./SHORT_GUIDELINES.md)
 
 ## Powering Performance with Modern Tech
 Morning.lang combines the raw power of C++ with the cutting-edge optimization capabilities of **LLVM 19** to deliver exceptional performance:
@@ -161,8 +168,20 @@ F --> G
 
 ## 💡 Language Highlights
 
-### 🧩 Factorial
+### 🧩 Arrays
+```morning
+[var (arr !array<!int,3>) (array 1 2 3)]
 
+// Access element
+[fprint "Element 0: %d\n" (index arr 0)]
+
+// Modify element
+[set (index arr 0) 10]
+[var idx 0]
+[fprint "Modified element 0: %d\n" (index arr idx)]
+```
+
+### 🧩 Factorial
 ```morning
 [func factorial (x) (scope
 	(check (== x 0)
@@ -175,7 +194,18 @@ F --> G
 ```
 
 ### For loops
-
+```morning
+(var sum 0)
+(for (var i 1) (<= i 10) (set i (+ i 1))
+    (scope
+    	(fprint "Result: %d\n" i)
+        (check (>= i 5)
+            (break)
+        )
+    )
+)
+(fprint "Result: %d\n" sum)
+```
 
 ### 🧩 Functions
 ```morning

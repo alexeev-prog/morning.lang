@@ -1,10 +1,11 @@
 #pragma once
 
-#include <vector>
-#include <string>
 #include <functional>
+#include <string>
 #include <unordered_map>
 #include <unordered_set>
+#include <vector>
+
 #include "parser/MorningLangGrammar.h"
 
 /**
@@ -12,10 +13,10 @@
  * @brief Represents a linting rule with metadata and checking logic
  */
 struct LintRule {
-    std::string code;                   ///< Unique rule identifier (e.g. "W001")
-    std::string description;            ///< Brief explanation of the rule
-    std::string example;                ///< Example of correct code
-    std::function<void(const Exp&, std::vector<std::string>&)> checker; ///< Rule implementation
+    std::string code;    ///< Unique rule identifier (e.g. "W001")
+    std::string description;    ///< Brief explanation of the rule
+    std::string example;    ///< Example of correct code
+    std::function<void(const Exp&, std::vector<std::string>&)> checker;    ///< Rule implementation
 };
 
 /**
@@ -23,7 +24,7 @@ struct LintRule {
  * @brief Static analyzer for MorningLang code with enhanced identifier checks
  */
 class Linter {
-public:
+  public:
     Linter();
 
     /**
@@ -46,11 +47,11 @@ public:
      */
     auto check_syntax(const std::string& code) -> std::vector<std::string>;
 
-private:
-    std::vector<LintRule> rules_;              ///< Registered linting rules
-    std::unordered_set<std::string> operators_; ///< Valid operator symbols
-    std::unordered_set<std::string> keywords_; ///< Keywords
-    std::unordered_map<std::string, int> symbolDeclarations_; ///< Symbol tracking
+  private:
+    std::vector<LintRule> rules_;    ///< Registered linting rules
+    std::unordered_set<std::string> operators_;    ///< Valid operator symbols
+    std::unordered_set<std::string> keywords_;    ///< Keywords
+    std::unordered_map<std::string, int> symbolDeclarations_;    ///< Symbol tracking
 
     /**
      * @brief Recursive AST traversal for rule checking

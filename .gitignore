@@ -43,3 +43,9 @@ report.html
 create_headers.py
 advanced
 bin/
+flake.lock
+poetry.lock
+venv/
+.venv/
+pyproject.toml
+program

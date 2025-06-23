@@ -1,0 +1,17 @@
+[var (arr !array<!int,3>) (array 1 2 3)]
+    
+// Access element
+[fprint "Element 0: %d\n" (index arr 0)]
+
+// Modify element
+[set (index arr 0) 10]
+[var idx 0]
+[fprint "Modified element 0: %d\n" (index arr idx)]
+
+// TODO: realize matrix better
+// [var (matrix !array<!array<!int,2>,2>)
+//   (array 
+//     (array 1 2)
+//     (array 3 4)
+//   )
+// ]

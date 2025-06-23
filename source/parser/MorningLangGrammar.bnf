@@ -20,7 +20,7 @@
 
 \s+                             %empty
 \"(\\.|[^"\\])*\"               STRING
-[\w\-+*=!<>/#]+                 SYMBOL
+[\w\-+*=!<>/,#]+                SYMBOL
 
 /lex
 
