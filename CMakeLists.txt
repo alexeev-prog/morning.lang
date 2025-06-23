@@ -34,6 +34,7 @@ add_library(
     source/morningllvm.cpp
     source/logger.cpp
     source/linter.cpp
+    source/codegen/arithmetic.cpp
 )
 target_link_libraries(morninglang_lib ${llvm_libs})
 target_link_libraries(morninglang_lib

@@ -479,7 +479,7 @@ auto main(int argc, char **argv) -> int {
     parser.add_option({"-h", "--help", "Print this help message", false, ""});
     parser.add_option({"-e", "--expression", "Expression to parse", true, "<expr>"});
     parser.add_option({"-f", "--file", "File to parse", true, "<file>"});
-    parser.add_option({"", "--lint", "File to lint", true, "<file>"});
+    parser.add_option({"-l", "--lint", "File to lint", true, "<file>"});
     parser.add_option({"-o", "--output", "Output binary name", true, "<name>"});
     parser.add_option({"-k", "--keep", "Keep temporary files", false, ""});
 
@@ -499,7 +499,7 @@ auto main(int argc, char **argv) -> int {
     }
 
     // Handle lint option
-    if (parser.has_option("--lint")) {
+    if (parser.has_option("--lint") || parser.has_option("-l")) {
         if (auto filename = parser.get_argument("--lint")) {
             return launch_lint(*filename);
         } else {

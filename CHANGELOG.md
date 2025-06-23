@@ -1,3 +1,15 @@
+commit f23fed4a216b2c61d559deba2f6343442338ef00
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Tue Jun 24 01:12:55 2025 +0700
+
+    fix docs, code architecture
+
+commit 83ce3902cf203fe0b1c8dbf1cb78d4b230b2e87e
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Tue Jun 24 01:02:29 2025 +0700
+
+    feat/docs: add arrays, improve type system, more examples, guidelines
+
 commit 4c89d9f99d5e2250f7150e2648a8cc1c83314922
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Sun Jun 22 07:53:48 2025 +0700

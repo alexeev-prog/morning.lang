@@ -31,6 +31,9 @@
 #include "parser/MorningLangGrammar.h"
 #include "tracelogger.hpp"
 
+#include "utils/cast.hpp"
+#include "codegen/arithmetic.hpp"
+
 namespace {
     /**
      * @brief Replace regex in string
@@ -196,24 +199,6 @@ MorningLanguageLLVM::MorningLanguageLLVM()
     setup_triple();
     setup_extern_functions();
     setup_global_environment();
-}
-
-auto MorningLanguageLLVM::implicit_cast(llvm::Value* value,
-                                        llvm::Type* target_type,
-                                        llvm::IRBuilder<>& builder) -> llvm::Value* {
-    if (value->getType() == target_type) {
-        return value;
-    }
-
-    // int -> frac (double)
-    if (value->getType()->isIntegerTy() && target_type->isDoubleTy()) {
-        LOG_WARN("Implicit cast from !int -> !frac");
-
-        return builder.CreateSIToFP(value, target_type, "castinttofrac");
-    }
-
-    // For other types, return original (will throw error later)
-    return value;
 }
 
 auto MorningLanguageLLVM::execute(const std::string& program,
@@ -513,72 +498,20 @@ auto MorningLanguageLLVM::generate_expression(const Exp& exp, const env& env) ->
             if (tag.type == ExpType::SYMBOL) {
                 auto oper = tag.string;
 
-                if (oper == "+" || oper == "-" || oper == "*" || oper == "/") {
+                if (oper == "+" || oper == "-" || oper == "*" || oper == "/" ||
+                    oper == ">" || oper == "<" || oper == ">=" || oper == "<=" ||
+                    oper == "==" || oper == "!=" || oper == "__PLUS_OPERAND__" ||
+                    oper == "__SUB_OPERAND__" || oper == "__MUL_OPERAND__" ||
+                    oper == "__DIV_OPERAND__" || oper == "__CMPG__" ||
+                    oper == "__CMPL__" || oper == "__CMPGE__" ||
+                    oper == "__CMPLE__" || oper == "__CMPEQ__" ||
+                    oper == "__CMPNE__") {
+
                     auto* left = generate_expression(exp.list[1], env);
                     auto* right = generate_expression(exp.list[2], env);
-
-                    // Determine common type
-                    llvm::Type* target_type = left->getType();
-                    if (left->getType()->isIntegerTy() && right->getType()->isDoubleTy()) {
-                        target_type = right->getType();
-                    } else if (left->getType()->isDoubleTy() && right->getType()->isIntegerTy()) {
-                        target_type = left->getType();
-                    }
-
-                    // Apply implicit casting
-                    left = implicit_cast(left, target_type, *m_IR_BUILDER);
-                    right = implicit_cast(right, target_type, *m_IR_BUILDER);
-
-                    // Generate operations
-                    if (target_type->isDoubleTy()) {
-                        if (oper == "+") {
-                            return m_IR_BUILDER->CreateFAdd(left, right, "__tmpfadd__");
-                        }
-                        if (oper == "-") {
-                            return m_IR_BUILDER->CreateFSub(left, right, "__tmpfsub__");
-                        }
-                        if (oper == "*") {
-                            return m_IR_BUILDER->CreateFMul(left, right, "__tmpfmul__");
-                        }
-                        if (oper == "/") {
-                            return m_IR_BUILDER->CreateFDiv(left, right, "__tmpfdiv__");
-                        }
-                    } else {
-                        if (oper == "+") {
-                            return m_IR_BUILDER->CreateAdd(left, right, "__tmpadd__");
-                        }
-                        if (oper == "-") {
-                            return m_IR_BUILDER->CreateSub(left, right, "__tmpsub__");
-                        }
-                        if (oper == "*") {
-                            return m_IR_BUILDER->CreateMul(left, right, "__tmpmul__");
-                        }
-                        if (oper == "/") {
-                            return m_IR_BUILDER->CreateSDiv(left, right, "__tmpdiv__");
-                        }
-                    }
-                }
-
-                if (oper == "+" || oper == "__PLUS_OPERAND__") {
-                    GEN_BINARY_OP(CreateAdd, "__tmpadd__");
-                } else if (oper == "-" || oper == "__SUB_OPERAND__") {
-                    GEN_BINARY_OP(CreateSub, "__tmpsub__");
-                } else if (oper == "*" || oper == "__MUL_OPERAND__") {
-                    GEN_BINARY_OP(CreateMul, "__tmpmul__");
-                } else if (oper == "/" || oper == "__DIV_OPERAND__") {
-                    GEN_BINARY_OP(CreateSDiv, "__tmpdiv__");
-                } else if (oper == ">" || oper == "__CMPG__") {
-                    GEN_BINARY_OP(CreateICmpUGT, "__tmpcmp__");
-                } else if (oper == "==" || oper == "__CMPEQ__") {
-                    GEN_BINARY_OP(CreateICmpEQ, "__tmpcmp__");
-                } else if (oper == "<" || oper == "__CMPL__") {
-                    GEN_BINARY_OP(CreateICmpULT, "__tmpcmp__");
-                } else if (oper == "!=" || oper == "__CMPNE__") {
-                    GEN_BINARY_OP(CreateICmpNE, "__tmpcmp__");
-                } else if (oper == ">=" || oper == "__CMPGE__") {
-                    GEN_BINARY_OP(CreateICmpUGE, "__tmpcmp__");
-                } else if (oper == "<=" || oper == "__CMPLE__") {
-                    GEN_BINARY_OP(CreateICmpULE, "__tmpcmp__");
+                    return ArithmeticCodegen::generate_binary_op(
+                        oper, left, right, *m_IR_BUILDER
+                    );
                 }
 
                 if (oper == "array") {

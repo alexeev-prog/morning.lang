@@ -20,6 +20,8 @@
 #include "llvm/IR/Module.h"    ///< Container for code (similar to source file)
 #include "parser/MorningLangGrammar.h"    ///< Grammar parser for MorningLang
 
+#include "codegen/arithmetic.hpp"
+
 /**
  * @def GEN_BINARY_OP(Op, varName)
  * @brief Macro to generate binary operation IR instructions
@@ -95,6 +97,23 @@ class MorningLanguageLLVM {
     auto execute(const std::string& program,
                  const std::string& output_base) -> int;
 
+    /**
+     * @brief Generates IR for any expression type
+     *
+     * Handles all expression types including:
+     * - Literals (numbers, strings)
+     * - Variables
+     * - Binary operations
+     * - Control structures (if, loop, while)
+     * - Function calls
+     * - Variable declarations
+     *
+     * @param exp Expression to compile
+     * @param env Current environment
+     * @return llvm::Value* Resulting LLVM value
+     */
+     auto generate_expression(const Exp& exp, const env& env) -> llvm::Value*;
+
   private:
     llvm::Function* m_ACTIVE_FUNCTION {};    ///< Current function being generated
     std::vector<LoopBlocks> m_LOOP_STACK;    ///< Stack for nested loop management
@@ -124,17 +143,6 @@ class MorningLanguageLLVM {
     * @return llvm::Value* Resulting LLVM value
     */
     auto generate_foreach(const Exp& exp, const env& env) -> llvm::Value*;
-
-    /**
-     * @brief Perform implicit type conversion (int -> frac)
-     *
-     * @param value Value to convert
-     * @param target_type Target type
-     * @param builder IR builder
-     * @return llvm::Value* Converted value or original if no conversion needed
-     */
-    auto implicit_cast(llvm::Value* value, llvm::Type* target_type, llvm::IRBuilder<>& builder)
-        -> llvm::Value*;
 
     /**
      * @brief Configures target triple for generated module
@@ -217,23 +225,6 @@ class MorningLanguageLLVM {
      * @return llvm::Value* Pointer to generated function
      */
     auto compile_function(const Exp& fn_exp, const std::string& fn_name, const env& env) -> llvm::Value*;
-
-    /**
-     * @brief Generates IR for any expression type
-     *
-     * Handles all expression types including:
-     * - Literals (numbers, strings)
-     * - Variables
-     * - Binary operations
-     * - Control structures (if, loop, while)
-     * - Function calls
-     * - Variable declarations
-     *
-     * @param exp Expression to compile
-     * @param env Current environment
-     * @return llvm::Value* Resulting LLVM value
-     */
-    auto generate_expression(const Exp& exp, const env& env) -> llvm::Value*;
 
     /**
      * @brief Registers external function prototypes
