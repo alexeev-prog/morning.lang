@@ -1,3 +1,9 @@
+commit 26100da8c64a894ad07f8ecf72a83f1c159d8240
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Tue Jun 24 02:11:40 2025 +0700
+
+    docs: add docstrings, improve codestyle
+
 commit 834ab9bde71f92eb46938db022bfc0160eb082e6
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Tue Jun 24 02:02:36 2025 +0700

@@ -49,6 +49,7 @@ For see Morning Standards, see [morning-standards](https://github.com/alexeev-pr
 
 Last standards:
 
+ + MCG-2 (Morning Coding Guidelines 2). [Read here](https://github.com/alexeev-prog/morning-standards/blob/main/standards/MCG2/index.md).
  + MCG-1 (Morning Coding Guidelines 1). [Read here](https://github.com/alexeev-prog/morning-standards/blob/main/standards/MCG1/index.md).
 
 ## Usage
