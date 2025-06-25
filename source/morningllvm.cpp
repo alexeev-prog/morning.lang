@@ -26,13 +26,12 @@
 #include <llvm/Support/Casting.h>
 #include <llvm/Support/raw_ostream.h>
 
+#include "codegen/arithmetic.hpp"
 #include "env.h"
 #include "logger.hpp"
 #include "parser/MorningLangGrammar.h"
 #include "tracelogger.hpp"
-
 #include "utils/cast.hpp"
-#include "codegen/arithmetic.hpp"
 
 namespace {
     /**
@@ -78,6 +77,9 @@ namespace {
         if (value == "double") {
             return "!frac";
         }
+        if (type_str == "i1") return "!bool";
+        if (type_str == "void") return "!none";
+        if (type_str == "i8*") return "!str";
 
         return value;
     }
@@ -201,8 +203,7 @@ MorningLanguageLLVM::MorningLanguageLLVM()
     setup_global_environment();
 }
 
-auto MorningLanguageLLVM::execute(const std::string& program,
-                                  const std::string& output_base) -> int {
+auto MorningLanguageLLVM::execute(const std::string& program, const std::string& output_base) -> int {
     LOG_TRACE
 
     auto ast = m_PARSER->parse("[scope " + program + "]");
@@ -273,7 +274,7 @@ auto MorningLanguageLLVM::get_type(const std::string& type_string, const std::st
     }
 
     if (type_string == "!int32") {
-        return m_IR_BUILDER->getInt32Ty();
+        return m_IR_BUILDER->getInt64Ty();
     }
 
     if (type_string == "!int16") {
@@ -317,7 +318,9 @@ auto MorningLanguageLLVM::get_type(const std::string& type_string, const std::st
 
         if (actual_size != expected_size) {
             LOG_CRITICAL("Size mismatch for '%s': expected %d bytes, actual %d bytes",
-                         var_name.c_str(), expected_size, actual_size);
+                         var_name.c_str(),
+                         expected_size,
+                         actual_size);
         }
         return type;
     }
@@ -367,13 +370,11 @@ auto MorningLanguageLLVM::get_type(const std::string& type_string, const std::st
         std::string size_str = inner.substr(comma_pos + 1);
 
         // Trim whitespace
-        auto trim = [](std::string& s) {
-            s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](int ch) {
-                return !std::isspace(ch);
-            }));
-            s.erase(std::find_if(s.rbegin(), s.rend(), [](int ch) {
-                return !std::isspace(ch);
-            }).base(), s.end());
+        auto trim = [](std::string& s)
+        {
+            s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](int ch) { return !std::isspace(ch); }));
+            s.erase(std::find_if(s.rbegin(), s.rend(), [](int ch) { return !std::isspace(ch); }).base(),
+                    s.end());
         };
 
         trim(element_type_str);
@@ -395,8 +396,7 @@ auto MorningLanguageLLVM::get_type(const std::string& type_string, const std::st
         return llvm::ArrayType::get(element_type, size);
     }
 
-    LOG_WARN("Variable \"%s\" does not have typing: set by auto (!int)",
-            var_name.c_str());
+    LOG_WARN("Variable \"%s\" does not have typing: set by auto (!int)", var_name.c_str());
 
     return m_IR_BUILDER->getInt64Ty();
 }
@@ -476,8 +476,20 @@ auto MorningLanguageLLVM::generate_expression(const Exp& exp, const env& env) ->
     add_expression_to_traceback_stack(exp);
 
     switch (exp.type) {
-        case ExpType::NUMBER:
-            return m_IR_BUILDER->getInt64(exp.number);
+        case ExpType::NUMBER: {
+            int64_t value = exp.number;
+
+            if (value >= INT8_MIN && value <= INT8_MAX) {
+                return m_IR_BUILDER->getInt8(static_cast<int8_t>(value));
+            }
+            if (value >= INT16_MIN && value <= INT16_MAX) {
+                return m_IR_BUILDER->getInt16(static_cast<int16_t>(value));
+            }
+            if (value >= INT32_MIN && value <= INT32_MAX) {
+                return m_IR_BUILDER->getInt32(static_cast<int32_t>(value));
+            }
+            return m_IR_BUILDER->getInt64(value);
+        }
         case ExpType::FRACTIONAL:
             return llvm::ConstantFP::get(m_IR_BUILDER->getDoubleTy(), exp.fractional);
         case ExpType::STRING: {
@@ -486,19 +498,23 @@ auto MorningLanguageLLVM::generate_expression(const Exp& exp, const env& env) ->
             return m_IR_BUILDER->CreateGlobalStringPtr(str);
         }
         case ExpType::SYMBOL:
-    if (exp.string == "true" || exp.string == "false") {
-        return m_IR_BUILDER->getInt8(static_cast<uint8_t>(exp.string == "true"));
-    } else {
-        auto var_name = exp.string;
-        auto* value = env->lookup_by_name(var_name);
+            if (exp.string == "true" || exp.string == "false") {
+                return m_IR_BUILDER->getInt8(static_cast<uint8_t>(exp.string == "true"));
+            } else {
+                auto var_name = exp.string;
+                auto* value = env->lookup_by_name(var_name);
 
-        // Загрузка значения переменной
-        return m_IR_BUILDER->CreateLoad(
-            value->getType()->getPointerTo(0),
-            value,
-            var_name.c_str()
-        );
-    }
+                // For strings: load the pointer to the string data
+                if (value->getType()->isPointerTy()) {
+                    return m_IR_BUILDER->CreateLoad(
+                        value->getType()->getPointerTo(0),
+                        value,
+                        var_name.c_str()
+                    );
+                }
+
+                return m_IR_BUILDER->CreateLoad(value->getType()->getPointerTo(0), value, var_name.c_str());
+            }
         case ExpType::LIST:
             if (exp.list.empty()) {
                 LOG_CRITICAL("Empty list expression at line %s", exp.list[1].string.c_str());
@@ -514,20 +530,16 @@ auto MorningLanguageLLVM::generate_expression(const Exp& exp, const env& env) ->
             if (tag.type == ExpType::SYMBOL) {
                 auto oper = tag.string;
 
-                if (oper == "+" || oper == "-" || oper == "*" || oper == "/" ||
-                    oper == ">" || oper == "<" || oper == ">=" || oper == "<=" ||
-                    oper == "==" || oper == "!=" || oper == "__PLUS_OPERAND__" ||
-                    oper == "__SUB_OPERAND__" || oper == "__MUL_OPERAND__" ||
-                    oper == "__DIV_OPERAND__" || oper == "__CMPG__" ||
-                    oper == "__CMPL__" || oper == "__CMPGE__" ||
-                    oper == "__CMPLE__" || oper == "__CMPEQ__" ||
-                    oper == "__CMPNE__") {
-
+                if (oper == "+" || oper == "-" || oper == "*" || oper == "/" || oper == ">" || oper == "<"
+                    || oper == ">=" || oper == "<=" || oper == "==" || oper == "!="
+                    || oper == "__PLUS_OPERAND__" || oper == "__SUB_OPERAND__" || oper == "__MUL_OPERAND__"
+                    || oper == "__DIV_OPERAND__" || oper == "__CMPG__" || oper == "__CMPL__"
+                    || oper == "__CMPGE__" || oper == "__CMPLE__" || oper == "__CMPEQ__"
+                    || oper == "__CMPNE__")
+                {
                     auto* left = generate_expression(exp.list[1], env);
                     auto* right = generate_expression(exp.list[2], env);
-                    return ArithmeticCodegen::generate_binary_op(
-                        oper, left, right, *m_IR_BUILDER
-                    );
+                    return ArithmeticCodegen::generate_binary_op(oper, left, right, *m_IR_BUILDER);
                 }
 
                 if (oper == "array") {
@@ -565,17 +577,13 @@ auto MorningLanguageLLVM::generate_expression(const Exp& exp, const env& env) ->
 
                     // For nested arrays, use the first element's type
                     if (is_nested_array) {
-                        return llvm::ConstantArray::get(
-                            llvm::ArrayType::get(element_type, elements.size()),
-                            elements
-                        );
+                        return llvm::ConstantArray::get(llvm::ArrayType::get(element_type, elements.size()),
+                                                        elements);
                     }
 
                     // For simple arrays
-                    return llvm::ConstantArray::get(
-                        llvm::ArrayType::get(element_type, elements.size()),
-                        elements
-                    );
+                    return llvm::ConstantArray::get(llvm::ArrayType::get(element_type, elements.size()),
+                                                    elements);
                 }
 
                 if (oper == "sizeof") {
@@ -602,16 +610,9 @@ auto MorningLanguageLLVM::generate_expression(const Exp& exp, const env& env) ->
 
                     if (!malloc_fn) {
                         auto* malloc_type = llvm::FunctionType::get(
-                            m_IR_BUILDER->getInt8Ty()->getPointerTo(),
-                            {m_IR_BUILDER->getInt64Ty()},
-                            false
-                        );
+                            m_IR_BUILDER->getInt8Ty()->getPointerTo(), {m_IR_BUILDER->getInt64Ty()}, false);
                         malloc_fn = llvm::Function::Create(
-                            malloc_type,
-                            llvm::Function::ExternalLinkage,
-                            "malloc",
-                            m_MODULE.get()
-                        );
+                            malloc_type, llvm::Function::ExternalLinkage, "malloc", m_MODULE.get());
                     }
 
                     return m_IR_BUILDER->CreateCall(malloc_fn, {size_val}, "malloc");
@@ -626,76 +627,81 @@ auto MorningLanguageLLVM::generate_expression(const Exp& exp, const env& env) ->
 
                     if (!free_fn) {
                         auto* free_type = llvm::FunctionType::get(
-                            m_IR_BUILDER->getVoidTy(),
-                            {m_IR_BUILDER->getInt8Ty()->getPointerTo()},
-                            false
-                        );
+                            m_IR_BUILDER->getVoidTy(), {m_IR_BUILDER->getInt8Ty()->getPointerTo()}, false);
                         free_fn = llvm::Function::Create(
-                            free_type,
-                            llvm::Function::ExternalLinkage,
-                            "free",
-                            m_MODULE.get()
-                        );
+                            free_type, llvm::Function::ExternalLinkage, "free", m_MODULE.get());
                     }
 
                     m_IR_BUILDER->CreateCall(free_fn, {ptr_val});
-                    return m_IR_BUILDER->getInt32(0);
+                    return m_IR_BUILDER->getInt64(0);
                 }
 
-                if (oper == "bit-and") {
+                if (oper == "bit-and" || oper == "bit-or" || oper == "bit-xor" ||
+                    oper == "bit-shl" || oper == "bit-shr" || oper == "bit-not") {
+
+                    if (oper == "bit-not") {
+                        auto* value = generate_expression(exp.list[1], env);
+
+                        if (!value->getType()->isIntegerTy()) {
+                            LOG_CRITICAL("Bitwise operation requires integer operand, got %s",
+                                        type_to_string(value->getType()).c_str());
+                        }
+
+                        return m_IR_BUILDER->CreateNot(value, "bit_not");
+                    }
+
                     auto* left = generate_expression(exp.list[1], env);
                     auto* right = generate_expression(exp.list[2], env);
-                    return m_IR_BUILDER->CreateAnd(left, right, "bit_and");
-                }
-                if (oper == "bit-or") {
-                    auto* left = generate_expression(exp.list[1], env);
-                    auto* right = generate_expression(exp.list[2], env);
-                    return m_IR_BUILDER->CreateOr(left, right, "bit_or");
-                }
-                if (oper == "bit-xor") {
-                    auto* left = generate_expression(exp.list[1], env);
-                    auto* right = generate_expression(exp.list[2], env);
-                    return m_IR_BUILDER->CreateXor(left, right, "bit_xor");
-                }
-                if (oper == "bit-shl") {
-                    auto* value = generate_expression(exp.list[1], env);
-                    auto* shift = generate_expression(exp.list[2], env);
-                    return m_IR_BUILDER->CreateShl(value, shift, "bit_shl");
-                }
-                if (oper == "bit-shr") {
-                    auto* value = generate_expression(exp.list[1], env);
-                    auto* shift = generate_expression(exp.list[2], env);
-                    return m_IR_BUILDER->CreateLShr(value, shift, "bit_shr");
-                }
-                if (oper == "bit-not") {
-                    auto* value = generate_expression(exp.list[1], env);
-                    return m_IR_BUILDER->CreateNot(value, "bit_not");
+
+                    if (!left->getType()->isIntegerTy() || !right->getType()->isIntegerTy()) {
+                        LOG_CRITICAL("Bitwise operation requires integer operands, got %s and %s",
+                                    type_to_string(left->getType()).c_str(),
+                                    type_to_string(right->getType()).c_str());
+                    }
+
+                    llvm::Type* common_type = nullptr;
+                    if (left->getType() != right->getType()) {
+                        unsigned left_size = left->getType()->getIntegerBitWidth();
+                        unsigned right_size = right->getType()->getIntegerBitWidth();
+                        unsigned max_size = std::max(left_size, right_size);
+                        common_type = m_IR_BUILDER->getIntNTy(max_size);
+
+                        left = m_IR_BUILDER->CreateZExtOrTrunc(left, common_type);
+                        right = m_IR_BUILDER->CreateZExtOrTrunc(right, common_type);
+                    } else {
+                        common_type = left->getType();
+                    }
+
+                    if (oper == "bit-and") {
+                        return m_IR_BUILDER->CreateAnd(left, right, "bit_and");
+                    }
+                    if (oper == "bit-or") {
+                        return m_IR_BUILDER->CreateOr(left, right, "bit_or");
+                    }
+                    if (oper == "bit-xor") {
+                        return m_IR_BUILDER->CreateXor(left, right, "bit_xor");
+                    }
+                    if (oper == "bit-shl") {
+                        return m_IR_BUILDER->CreateShl(left, right, "bit_shl");
+                    }
+                    if (oper == "bit-shr") {
+                        return m_IR_BUILDER->CreateLShr(left, right, "bit_shr");
+                    }
                 }
 
-                // Работа с байтами
                 if (oper == "byte-read") {
                     auto* ptr = generate_expression(exp.list[1], env);
-                    auto* casted_ptr = m_IR_BUILDER->CreateBitCast(
-                        ptr,
-                        m_IR_BUILDER->getInt8Ty()->getPointerTo()
-                    );
-                    return m_IR_BUILDER->CreateLoad(
-                        m_IR_BUILDER->getInt8Ty(),
-                        casted_ptr,
-                        "byte_read"
-                    );
+                    auto* casted_ptr =
+                        m_IR_BUILDER->CreateBitCast(ptr, m_IR_BUILDER->getInt8Ty()->getPointerTo());
+                    return m_IR_BUILDER->CreateLoad(m_IR_BUILDER->getInt8Ty(), casted_ptr, "byte_read");
                 }
                 if (oper == "byte-write") {
                     auto* ptr = generate_expression(exp.list[1], env);
                     auto* value = generate_expression(exp.list[2], env);
-                    auto* casted_ptr = m_IR_BUILDER->CreateBitCast(
-                        ptr,
-                        m_IR_BUILDER->getInt8Ty()->getPointerTo()
-                    );
+                    auto* casted_ptr =
+                        m_IR_BUILDER->CreateBitCast(ptr, m_IR_BUILDER->getInt8Ty()->getPointerTo());
                     return m_IR_BUILDER->CreateStore(
-                        m_IR_BUILDER->CreateTrunc(value, m_IR_BUILDER->getInt8Ty()),
-                        casted_ptr
-                    );
+                        m_IR_BUILDER->CreateTrunc(value, m_IR_BUILDER->getInt8Ty()), casted_ptr);
                 }
 
                 if (oper == "mem-write") {
@@ -706,12 +712,8 @@ auto MorningLanguageLLVM::generate_expression(const Exp& exp, const env& env) ->
                     auto* ptr_val = generate_expression(ptr_exp, env);
                     auto* value_val = generate_expression(value_exp, env);
 
-                    // Преобразуем void* в указатель нужного типа
                     auto* casted_ptr = m_IR_BUILDER->CreateBitCast(
-                        ptr_val,
-                        value_val->getType()->getPointerTo(),
-                        "cast_ptr"
-                    );
+                        ptr_val, value_val->getType()->getPointerTo(), "cast_ptr");
                     m_IR_BUILDER->CreateStore(value_val, casted_ptr);
                     return value_val;
                 }
@@ -724,12 +726,8 @@ auto MorningLanguageLLVM::generate_expression(const Exp& exp, const env& env) ->
                     auto* ptr_val = generate_expression(ptr_exp, env);
                     auto* target_type = get_type(type_exp.string, "mem_read");
 
-                    // Преобразуем void* в указатель нужного типа
-                    auto* casted_ptr = m_IR_BUILDER->CreateBitCast(
-                        ptr_val,
-                        target_type->getPointerTo(),
-                        "cast_ptr"
-                    );
+                    auto* casted_ptr =
+                        m_IR_BUILDER->CreateBitCast(ptr_val, target_type->getPointerTo(), "cast_ptr");
                     return m_IR_BUILDER->CreateLoad(target_type, casted_ptr, "load");
                 }
 
@@ -739,12 +737,8 @@ auto MorningLanguageLLVM::generate_expression(const Exp& exp, const env& env) ->
                     auto var_name = exp.list[1].string;
                     auto* var_ptr = env->lookup_by_name(var_name);
 
-                    // Приводим указатель к общему типу void*
                     return m_IR_BUILDER->CreateBitCast(
-                        var_ptr,
-                        m_IR_BUILDER->getInt8Ty()->getPointerTo(),
-                        "to_void_ptr"
-                    );
+                        var_ptr, m_IR_BUILDER->getInt8Ty()->getPointerTo(), "to_void_ptr");
                 }
 
                 if (oper == "mem-deref") {
@@ -755,12 +749,8 @@ auto MorningLanguageLLVM::generate_expression(const Exp& exp, const env& env) ->
                     auto* ptr_val = generate_expression(ptr_exp, env);
                     auto* target_type = get_type(type_exp.string, "mem_deref");
 
-                    // Преобразуем void* в указатель нужного типа
-                    auto* casted_ptr = m_IR_BUILDER->CreateBitCast(
-                        ptr_val,
-                        target_type->getPointerTo(),
-                        "cast_ptr"
-                    );
+                    auto* casted_ptr =
+                        m_IR_BUILDER->CreateBitCast(ptr_val, target_type->getPointerTo(), "cast_ptr");
                     return m_IR_BUILDER->CreateLoad(target_type, casted_ptr, "deref");
                 }
 
@@ -768,18 +758,18 @@ auto MorningLanguageLLVM::generate_expression(const Exp& exp, const env& env) ->
                     LOG_DEBUG("Process array indexing");
 
                     if (exp.list.size() != 3) {
-                      LOG_CRITICAL("index operation requires 2 arguments");
+                        LOG_CRITICAL("index operation requires 2 arguments");
                     }
 
                     // First argument must be symbol (array name)
                     if (exp.list[1].type != ExpType::SYMBOL) {
-                      LOG_CRITICAL("index: first argument must be array name");
+                        LOG_CRITICAL("index: first argument must be array name");
                     }
 
                     const std::string& array_name = exp.list[1].string;
                     auto array_type_it = m_ARRAY_TYPES.find(array_name);
                     if (array_type_it == m_ARRAY_TYPES.end()) {
-                      LOG_CRITICAL("Array '%s' not found", array_name.c_str());
+                        LOG_CRITICAL("Array '%s' not found", array_name.c_str());
                     }
 
                     llvm::ArrayType* array_type = array_type_it->second;
@@ -788,18 +778,17 @@ auto MorningLanguageLLVM::generate_expression(const Exp& exp, const env& env) ->
 
                     // Validate index type
                     if (!index_val->getType()->isIntegerTy()) {
-                      LOG_CRITICAL("Array index must be integer type");
+                        LOG_CRITICAL("Array index must be integer type");
                     }
 
                     // Create GEP (getelementptr) for array element
-                    llvm::Value* zero = m_IR_BUILDER->getInt32(0);
+                    llvm::Value* zero = m_IR_BUILDER->getInt64(0);
                     std::vector<llvm::Value*> indices = {zero, index_val};
-                    llvm::Value* element_ptr = m_IR_BUILDER->CreateInBoundsGEP(
-                        array_type, array_ptr, indices, "elementptr");
+                    llvm::Value* element_ptr =
+                        m_IR_BUILDER->CreateInBoundsGEP(array_type, array_ptr, indices, "elementptr");
 
-                    return m_IR_BUILDER->CreateLoad(
-                        array_type->getElementType(), element_ptr, "loadarray");
-                  }
+                    return m_IR_BUILDER->CreateLoad(array_type->getElementType(), element_ptr, "loadarray");
+                }
 
                 if (oper == "if") {
                     LOG_DEBUG("Process if-elif-else: %s", exp.list[1].string.c_str());
@@ -1104,9 +1093,9 @@ auto MorningLanguageLLVM::generate_expression(const Exp& exp, const env& env) ->
                 }
 
                 if (oper == "set") {
-                    if (exp.list[1].type == ExpType::LIST &&
-                            !exp.list[1].list.empty() &&
-                            exp.list[1].list[0].string == "index") {
+                    if (exp.list[1].type == ExpType::LIST && !exp.list[1].list.empty()
+                        && exp.list[1].list[0].string == "index")
+                    {
                         const Exp& index_exp = exp.list[1];
 
                         if (index_exp.list.size() != 3) {
@@ -1135,10 +1124,10 @@ auto MorningLanguageLLVM::generate_expression(const Exp& exp, const env& env) ->
                         }
 
                         // Create GEP (getelementptr) for array element
-                        llvm::Value* zero = m_IR_BUILDER->getInt32(0);
+                        llvm::Value* zero = m_IR_BUILDER->getInt64(0);
                         std::vector<llvm::Value*> indices = {zero, index_val};
-                        llvm::Value* element_ptr = m_IR_BUILDER->CreateInBoundsGEP(
-                            array_type, array_ptr, indices, "setptr");
+                        llvm::Value* element_ptr =
+                            m_IR_BUILDER->CreateInBoundsGEP(array_type, array_ptr, indices, "setptr");
 
                         // Cast value to element type if needed
                         value = implicit_cast(value, array_type->getElementType(), *m_IR_BUILDER);
@@ -1168,15 +1157,15 @@ auto MorningLanguageLLVM::generate_expression(const Exp& exp, const env& env) ->
                     }
 
                     // Validate type
-                    if (value->getType() != var_type) {
+                    if (value->getType() != var_type && type_to_string(value->getType()) != type_to_string(var_type)) {
                         // Allow implicit int->frac conversion
                         if (value->getType()->isIntegerTy() && var_type->isDoubleTy()) {
                             value = m_IR_BUILDER->CreateSIToFP(value, var_type, "castset");
                         } else {
                             LOG_CRITICAL("Type mismatch for '%s': cannot assign %s to %s",
-                                         var_name.c_str(),
-                                         type_to_string(value->getType()).c_str(),
-                                         type_to_string(var_type).c_str());
+                                        var_name.c_str(),
+                                        type_to_string(value->getType()).c_str(),
+                                        type_to_string(var_type).c_str());
                         }
                     }
 
@@ -1204,7 +1193,9 @@ auto MorningLanguageLLVM::generate_expression(const Exp& exp, const env& env) ->
                     }
 
                     // Validate type
-                    if (init->getType() != var_type && type_to_string(var_type) == "!int" || type_to_string(var_type) == "!frac") {
+                    if (init->getType() != var_type && type_to_string(var_type) == "!int"
+                        || type_to_string(var_type) == "!frac")
+                    {
                         // Allow implicit int->frac conversion
                         if (init->getType()->isIntegerTy() && var_type->isDoubleTy()) {
                             init = m_IR_BUILDER->CreateSIToFP(init, var_type, "castinit");
@@ -1255,44 +1246,97 @@ auto MorningLanguageLLVM::generate_expression(const Exp& exp, const env& env) ->
                 }
 
                 if (oper == "finput") {
-    LOG_DEBUG("Process finput");
+                    LOG_DEBUG("Process finput");
 
-    auto* scanf_fn = m_MODULE->getFunction("scanf");
-    std::vector<llvm::Value*> args;
+                    auto* scanf_fn = m_MODULE->getFunction("scanf");
+                    std::vector<llvm::Value*> args;
 
-    // Format string
-    args.push_back(generate_expression(exp.list[1], env));
+                    // Automatically convert %s to %[^\n] for string inputs
+                    auto format_exp = exp.list[1];
+                    std::string format_str = (format_exp.type == ExpType::STRING) ? format_exp.string : "";
+                    bool has_string_input = false;
 
-    for (size_t i = 2; i < exp.list.size(); ++i) {
-        std::string const VAR_NAME = exp.list[i].string;
-        llvm::Value* var_ptr = env->lookup_by_name(VAR_NAME);
+                    // Check for string arguments
+                    for (size_t i = 2; i < exp.list.size(); ++i) {
+                        std::string var_name = exp.list[i].string;
+                        llvm::Value* var_ptr = env->lookup_by_name(var_name);
+                        if (var_ptr->getType()->isPointerTy()) {
+                            has_string_input = true;
+                            break;
+                        }
+                    }
 
-        // Для строк: создаем буфер и сохраняем его в переменную
-        if (var_ptr->getType()->isPointerTy()) {
-            // Выделяем буфер на стеке
-            auto* buffer_type = llvm::ArrayType::get(
-                m_IR_BUILDER->getInt8Ty(), 256);
-            auto* buffer = m_IR_BUILDER->CreateAlloca(
-                buffer_type, nullptr, "input_buffer");
+                    if (has_string_input && format_str.find("%s") != std::string::npos) {
+                        // Replace all %s with %[^\n] to read full lines
+                        size_t pos = 0;
+                        while ((pos = format_str.find("%s", pos)) != std::string::npos) {
+                            format_str.replace(pos, 2, "%[^\n]");
+                            pos += 6; // Move past the replacement
+                        }
+                    }
 
-            // Получаем указатель на начало буфера
-            auto* buffer_ptr = m_IR_BUILDER->CreateBitCast(
-                buffer,
-                m_IR_BUILDER->getInt8Ty()->getPointerTo(),
-                "buffer_ptr"
-            );
+                    // Create format string constant
+                    auto* format_const = m_IR_BUILDER->CreateGlobalStringPtr(format_str);
+                    args.push_back(format_const);
 
-            // Сохраняем указатель в переменную
-            m_IR_BUILDER->CreateStore(buffer_ptr, var_ptr);
-            args.push_back(buffer_ptr);
-        } else {
-            // Для чисел передаем указатель как есть
-            args.push_back(var_ptr);
-        }
-    }
+                    // Process variables and create buffers
+                    for (size_t i = 2; i < exp.list.size(); ++i) {
+                        std::string var_name = exp.list[i].string;
+                        llvm::Value* var_ptr = env->lookup_by_name(var_name);
 
-    return m_IR_BUILDER->CreateCall(scanf_fn, args);
-}
+                        if (var_ptr->getType()->isPointerTy()) {
+                            // Allocate 256-byte buffer on stack
+                            auto* buffer_type = llvm::ArrayType::get(
+                                m_IR_BUILDER->getInt8Ty(), 256);
+                            auto* buffer = m_IR_BUILDER->CreateAlloca(
+                                buffer_type, nullptr, "input_buffer");
+                            auto* buffer_ptr = m_IR_BUILDER->CreateBitCast(
+                                buffer, m_IR_BUILDER->getInt8Ty()->getPointerTo());
+
+                            // Store buffer pointer in variable
+                            m_IR_BUILDER->CreateStore(buffer_ptr, var_ptr);
+                            args.push_back(buffer_ptr);
+                        } else {
+                            args.push_back(var_ptr);
+                        }
+                    }
+
+                    auto* scanf_call = m_IR_BUILDER->CreateCall(scanf_fn, args);
+
+                    // Add buffer cleaning after scanf
+                    if (has_string_input) {
+                        auto* getchar_fn = m_MODULE->getFunction("getchar");
+                        if (!getchar_fn) {
+                            getchar_fn = llvm::Function::Create(
+                                llvm::FunctionType::get(m_IR_BUILDER->getInt64Ty(), false),
+                                llvm::Function::ExternalLinkage,
+                                "getchar",
+                                m_MODULE.get()
+                            );
+                        }
+
+                        // Create blocks for cleaning loop
+                        auto* loop_block = create_basic_block("clean_loop", m_ACTIVE_FUNCTION);
+                        auto* end_block = create_basic_block("clean_end", m_ACTIVE_FUNCTION);
+
+                        m_IR_BUILDER->CreateBr(loop_block);
+                        m_IR_BUILDER->SetInsertPoint(loop_block);
+
+                        // Read characters until newline or EOF
+                        auto* ch = m_IR_BUILDER->CreateCall(getchar_fn, {}, "ch");
+                        auto* is_newline = m_IR_BUILDER->CreateICmpEQ(
+                            ch, m_IR_BUILDER->getInt64('\n'), "is_newline");
+                        auto* is_eof = m_IR_BUILDER->CreateICmpEQ(
+                            ch, m_IR_BUILDER->getInt64(-1), "is_eof");
+                        auto* should_break = m_IR_BUILDER->CreateOr(
+                            is_newline, is_eof, "break_cond");
+
+                        m_IR_BUILDER->CreateCondBr(should_break, end_block, loop_block);
+                        m_IR_BUILDER->SetInsertPoint(end_block);
+                    }
+
+                    return scanf_call;
+                }
 
                 // Function calls
 
@@ -1328,11 +1372,14 @@ void MorningLanguageLLVM::setup_extern_functions() {
     m_MODULE->getOrInsertFunction("printf",
                                   llvm::FunctionType::get(m_IR_BUILDER->getInt64Ty(), byte_ptr_ty, true));
 
-    auto* scanf_type = llvm::FunctionType::get(m_IR_BUILDER->getInt32Ty(),
+    auto* scanf_type = llvm::FunctionType::get(m_IR_BUILDER->getInt64Ty(),
                                                {m_IR_BUILDER->getInt8Ty()->getPointerTo()},
                                                true    // variadic
     );
     m_MODULE->getOrInsertFunction("scanf", scanf_type);
+
+    m_MODULE->getOrInsertFunction("getchar",
+        llvm::FunctionType::get(m_IR_BUILDER->getInt64Ty(), false));
 }
 
 auto MorningLanguageLLVM::create_function(const std::string& name, llvm::FunctionType* type, const env& env)

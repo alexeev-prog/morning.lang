@@ -1,3 +1,9 @@
+commit b27a74dba362328d9e86f6eee9d8139cee5473e9
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Thu Jun 26 01:14:56 2025 +0700
+
+    fix string finput bug
+
 commit 3b0547d57f3b01ea6f84766872ea0145bbd73ac1
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Tue Jun 24 03:33:41 2025 +0700

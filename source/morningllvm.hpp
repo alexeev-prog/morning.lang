@@ -14,13 +14,12 @@
 #include <llvm/IR/Value.h>    ///< Fundamental value representation in LLVM
 #include <llvm/IR/Verifier.h>    ///< Tools for IR validity checks
 
+#include "codegen/arithmetic.hpp"
 #include "env.h"    ///< Environment header
 #include "llvm/IR/IRBuilder.h"    ///< IR construction utilities
 #include "llvm/IR/LLVMContext.h"    ///< Context for compilation environment isolation
 #include "llvm/IR/Module.h"    ///< Container for code (similar to source file)
 #include "parser/MorningLangGrammar.h"    ///< Grammar parser for MorningLang
-
-#include "codegen/arithmetic.hpp"
 
 /**
  * @def GEN_BINARY_OP(Op, varName)
@@ -94,8 +93,7 @@ class MorningLanguageLLVM {
      * @param output_base Base filename for output files (without extension)
      * @return int Status code (0 = success)
      */
-    auto execute(const std::string& program,
-                 const std::string& output_base) -> int;
+    auto execute(const std::string& program, const std::string& output_base) -> int;
 
     /**
      * @brief Generates IR for any expression type
@@ -112,7 +110,7 @@ class MorningLanguageLLVM {
      * @param env Current environment
      * @return llvm::Value* Resulting LLVM value
      */
-     auto generate_expression(const Exp& exp, const env& env) -> llvm::Value*;
+    auto generate_expression(const Exp& exp, const env& env) -> llvm::Value*;
 
   private:
     llvm::Function* m_ACTIVE_FUNCTION {};    ///< Current function being generated
@@ -125,7 +123,7 @@ class MorningLanguageLLVM {
     std::unique_ptr<llvm::IRBuilder<>> m_VARS_BUILDER;    ///< Builder for variable allocation
     std::map<std::string, llvm::Value*> m_CONSTANTS;    ///< Map of constant variables
     std::map<std::string, llvm::Value*> m_VARIABLES;    ///< Map of variables
-    std::map<std::string, llvm::ArrayType*> m_ARRAY_TYPES; ///< Map of array types
+    std::map<std::string, llvm::ArrayType*> m_ARRAY_TYPES;    ///< Map of array types
 
     /**
      * @brief Get size of type in bytes
@@ -133,7 +131,7 @@ class MorningLanguageLLVM {
      * @param type LLVM type
      * @return uint64_t Size in bytes
      */
-     auto get_type_size(llvm::Type* type) -> uint64_t {
+    auto get_type_size(llvm::Type* type) -> uint64_t {
         llvm::DataLayout data_layout(m_MODULE.get());
         return data_layout.getTypeAllocSize(type).getFixedValue();
     }

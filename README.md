@@ -205,9 +205,9 @@ F --> G
 [fprint "Flags: %b\n" flags]
 
 // Bit check
-//[check (bit-and flags 0b0010)
-//    [fprint "Bit 2 is set!\n"]
-//    [fprint "Bit 2 is not set!\n"]]
+[check (bit-and flags 0b0010)
+    [fprint "Bit 2 is set!\n"]
+    [fprint "Bit 2 is not set!\n"]]
 
 // Raw byte operations
 [var (buffer !ptr) (mem-alloc 4)] // Allocate 4-byte buffer
@@ -218,6 +218,16 @@ F --> G
 
 // Size-constrained type declaration
 [var (size_checked_int !size:8!int) 0] // 8-bit integer
+```
+
+### 🧩 Input strings
+```morning
+[var (name !str) "Initial"]
+
+[fprint "Enter your name: "]
+[finput "%[^\n]" name]
+
+[fprint "Hello, %s!\n" name]
 ```
 
 ### 🧩 Arrays
