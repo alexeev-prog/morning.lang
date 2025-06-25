@@ -486,25 +486,19 @@ auto MorningLanguageLLVM::generate_expression(const Exp& exp, const env& env) ->
             return m_IR_BUILDER->CreateGlobalStringPtr(str);
         }
         case ExpType::SYMBOL:
-            if (exp.string == "true" || exp.string == "false") {
-                return m_IR_BUILDER->getInt8(static_cast<uint8_t>(exp.string == "true"));
-            } else {
-                auto var_name = exp.string;
-                auto* value = env->lookup_by_name(var_name);
+    if (exp.string == "true" || exp.string == "false") {
+        return m_IR_BUILDER->getInt8(static_cast<uint8_t>(exp.string == "true"));
+    } else {
+        auto var_name = exp.string;
+        auto* value = env->lookup_by_name(var_name);
 
-                if (auto* local_var = llvm::dyn_cast<llvm::AllocaInst>(value)) {
-                    return m_IR_BUILDER->CreateLoad(
-                        local_var->getAllocatedType(), local_var, var_name.c_str());
-                }
-
-                if (auto* global_var = llvm::dyn_cast<llvm::GlobalVariable>(value)) {
-                    return m_IR_BUILDER->CreateLoad(
-                        global_var->getInitializer()->getType(), global_var, var_name.c_str());
-                }
-
-                return value;
-            }
-            return m_MODULE->getNamedGlobal(exp.string)->getInitializer();
+        // Загрузка значения переменной
+        return m_IR_BUILDER->CreateLoad(
+            value->getType()->getPointerTo(0),
+            value,
+            var_name.c_str()
+        );
+    }
         case ExpType::LIST:
             if (exp.list.empty()) {
                 LOG_CRITICAL("Empty list expression at line %s", exp.list[1].string.c_str());
@@ -1210,7 +1204,7 @@ auto MorningLanguageLLVM::generate_expression(const Exp& exp, const env& env) ->
                     }
 
                     // Validate type
-                    if (init->getType() != var_type) {
+                    if (init->getType() != var_type && type_to_string(var_type) == "!int" || type_to_string(var_type) == "!frac") {
                         // Allow implicit int->frac conversion
                         if (init->getType()->isIntegerTy() && var_type->isDoubleTy()) {
                             init = m_IR_BUILDER->CreateSIToFP(init, var_type, "castinit");
@@ -1261,23 +1255,44 @@ auto MorningLanguageLLVM::generate_expression(const Exp& exp, const env& env) ->
                 }
 
                 if (oper == "finput") {
-                    LOG_DEBUG("Process finput");
+    LOG_DEBUG("Process finput");
 
-                    auto* scanf_fn = m_MODULE->getFunction("scanf");
-                    std::vector<llvm::Value*> args;
+    auto* scanf_fn = m_MODULE->getFunction("scanf");
+    std::vector<llvm::Value*> args;
 
-                    // Format string
-                    args.push_back(generate_expression(exp.list[1], env));
+    // Format string
+    args.push_back(generate_expression(exp.list[1], env));
 
-                    // Variable references
-                    for (size_t i = 2; i < exp.list.size(); ++i) {
-                        std::string const VAR_NAME = exp.list[i].string;
-                        llvm::Value* var_ptr = env->lookup_by_name(VAR_NAME);
-                        args.push_back(var_ptr);
-                    }
+    for (size_t i = 2; i < exp.list.size(); ++i) {
+        std::string const VAR_NAME = exp.list[i].string;
+        llvm::Value* var_ptr = env->lookup_by_name(VAR_NAME);
 
-                    return m_IR_BUILDER->CreateCall(scanf_fn, args);
-                }
+        // Для строк: создаем буфер и сохраняем его в переменную
+        if (var_ptr->getType()->isPointerTy()) {
+            // Выделяем буфер на стеке
+            auto* buffer_type = llvm::ArrayType::get(
+                m_IR_BUILDER->getInt8Ty(), 256);
+            auto* buffer = m_IR_BUILDER->CreateAlloca(
+                buffer_type, nullptr, "input_buffer");
+
+            // Получаем указатель на начало буфера
+            auto* buffer_ptr = m_IR_BUILDER->CreateBitCast(
+                buffer,
+                m_IR_BUILDER->getInt8Ty()->getPointerTo(),
+                "buffer_ptr"
+            );
+
+            // Сохраняем указатель в переменную
+            m_IR_BUILDER->CreateStore(buffer_ptr, var_ptr);
+            args.push_back(buffer_ptr);
+        } else {
+            // Для чисел передаем указатель как есть
+            args.push_back(var_ptr);
+        }
+    }
+
+    return m_IR_BUILDER->CreateCall(scanf_fn, args);
+}
 
                 // Function calls
 

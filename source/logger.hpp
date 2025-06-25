@@ -35,8 +35,8 @@ public:
     static void print_traceback();
 
 private:
-    static constexpr size_t MAX_STACK_SIZE = 100;
-    static constexpr size_t TRACEBACK_LIMIT = 10;
+    static const constexpr size_t MAX_STACK_SIZE = 100;
+    static const constexpr size_t TRACEBACK_LIMIT = 15;
     static thread_local std::vector<std::pair<std::string, std::string>> expression_stack_;
 
     // Приватный шаблонный метод

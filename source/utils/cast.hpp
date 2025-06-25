@@ -20,8 +20,14 @@ inline auto implicit_cast(
         return value;
     }
 
+    // Handle integer to fractional conversion
     if (value->getType()->isIntegerTy() && target_type->isDoubleTy()) {
         return builder.CreateSIToFP(value, target_type, "cast_int_to_double");
+    }
+
+    // Handle string to pointer conversion
+    if (value->getType()->isPointerTy() && target_type->isPointerTy()) {
+        return builder.CreatePointerCast(value, target_type, "cast_ptr");
     }
 
     return value;
