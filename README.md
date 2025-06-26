@@ -37,7 +37,21 @@
 
 <div align="center">  
   <img src="https://raw.githubusercontent.com/alexeev-prog/morning.lang/refs/heads/main/docs/pallet-0.png" width="600" alt="Color Palette">  
-</div>  
+</div>
+
+The Morning programming language is a low-level language with high-level parts. The syntax is based on S-expressions. The goal of the language is to explore low-level programming languages from a new perspective and with new constructs. The language has a medium-strict typing system and an evolving ecosystem.
+
+## VSCode Extension
+We have VS Code extension for code highlight and snippets. [Extension here](https://marketplace.visualstudio.com/items?itemName=alexeevdev.morning-language-syntax).
+
+![alt text](https://raw.githubusercontent.com/alexeev-prog/morning-vscode-ext/refs/heads/main/image.png)
+
+## Standards
+For see Morning Standards, see [morning-standards](https://github.com/alexeev-prog/morning-standards).
+
+Last standards:
+
+ + MCG-1 (Morning Coding Guidelines 1). [Read here](https://github.com/alexeev-prog/morning-standards/blob/main/standards/MCG1/index.md).
 
 ## 🚀 Technical Overview  
 Morning.lang is a statically-typed systems programming language designed for performance-critical applications.  
@@ -403,6 +417,14 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License  
 along with this program. If not, see <https://www.gnu.org/licenses/>.  
 ```  
+
+## Morning Manifesto
+*"We reject the false choice between performance and expressiveness.  
+We reject the old methods imposed by backward compatibility with  
+long-dead legacy products. Morning is a new era in programming  
+that combines the simplicity of S-expressions with the functionality  
+of C++. Thanks to the purity of the project and its versatility,  
+you can create anything and everything you want."* 
 
 <div align="center">  
   <br>  

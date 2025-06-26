@@ -1,3 +1,9 @@
+commit db39fa21ff12448b7fc6c9bf558d10b5d9151b8d
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Thu Jun 26 16:16:09 2025 +0700
+
+    improve utils, improve compilating warnings
+
 commit f533c72b510e4c8a02289301f5d6ff47db6e8e10
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Thu Jun 26 02:08:33 2025 +0700
