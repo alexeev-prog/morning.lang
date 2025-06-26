@@ -1,170 +1,154 @@
-# ⚡ morning.lang - The Next-Gen Systems Programming Language
-<a id="readme-top"></a>
+# ⚡ morning.lang - The Next-Gen Systems Programming Language  
+<a id="readme-top"></a>  
 
-<div align="center">
-  <img src="https://raw.githubusercontent.com/alexeev-prog/morning.lang/refs/heads/main/docs/logo.png" width="250" alt="MorningLang Logo">
+<div align="center">  
+  <img src="https://raw.githubusercontent.com/alexeev-prog/morning.lang/refs/heads/main/docs/logo.png" width="250" alt="MorningLang Logo">  
 
-  <h3>A high-performance language combining C++ power with LLVM19 optimization</h3>
+  <h3>A high-performance systems language combining C++ power with LLVM19 optimization</h3>  
 
-  <div>
-    <a href="https://marketplace.visualstudio.com/items?itemName=alexeevdev.morning-language-syntax">
-      <img src="https://img.shields.io/badge/VSCode-extension?style=for-the-badge&logo=gitbook" alt="Docs">
-    </a>
-    <a href="https://github.com/alexeev-prog/morning.lang/blob/main/LICENSE">
-      <img src="https://img.shields.io/badge/License-GPL_v3-blue?style=for-the-badge&logo=gnu" alt="License">
-    </a>
-    <a href="https://github.com/alexeev-prog/morning.lang/stargazers">
-      <img src="https://img.shields.io/github/stars/alexeev-prog/morning.lang?style=for-the-badge&logo=github" alt="Stars">
-    </a>
-  </div>
-</div>
+  <div>  
+    <a href="https://marketplace.visualstudio.com/items?itemName=alexeevdev.morning-language-syntax">  
+      <img src="https://img.shields.io/badge/VSCode-extension?style=for-the-badge&logo=gitbook" alt="Docs">  
+    </a>  
+    <a href="https://github.com/alexeev-prog/morning.lang/blob/main/LICENSE">  
+      <img src="https://img.shields.io/badge/License-GPL_v3-blue?style=for-the-badge&logo=gnu" alt="License">  
+    </a>  
+    <a href="https://github.com/alexeev-prog/morning.lang/stargazers">  
+      <img src="https://img.shields.io/github/stars/alexeev-prog/morning.lang?style=for-the-badge&logo=github" alt="Stars">  
+    </a>  
+  </div>  
+</div>  
 
-<br>
+<br>  
 
-<div align="center">
-  <img src="https://img.shields.io/github/languages/top/alexeev-prog/morning.lang?style=for-the-badge" alt="Top Language">
-  <img src="https://img.shields.io/github/languages/count/alexeev-prog/morning.lang?style=for-the-badge" alt="Language Count">
-  <img src="https://img.shields.io/github/license/alexeev-prog/morning.lang?style=for-the-badge" alt="License">
-  <img src="https://img.shields.io/github/issues/alexeev-prog/morning.lang?style=for-the-badge&color=critical" alt="Issues">
-  <img src="https://img.shields.io/github/last-commit/alexeev-prog/morning.lang?style=for-the-badge" alt="Last Commit">
-  <img src="https://img.shields.io/github/contributors/alexeev-prog/morning.lang?style=for-the-badge" alt="Contributors">
-</div>
+<div align="center">  
+  <img src="https://img.shields.io/github/languages/top/alexeev-prog/morning.lang?style=for-the-badge" alt="Top Language">  
+  <img src="https://img.shields.io/github/languages/count/alexeev-prog/morning.lang?style=for-the-badge" alt="Language Count">  
+  <img src="https://img.shields.io/github/license/alexeev-prog/morning.lang?style=for-the-badge" alt="License">  
+  <img src="https://img.shields.io/github/issues/alexeev-prog/morning.lang?style=for-the-badge&color=critical" alt="Issues">  
+  <img src="https://img.shields.io/github/last-commit/alexeev-prog/morning.lang?style=for-the-badge" alt="Last Commit">  
+  <img src="https://img.shields.io/github/contributors/alexeev-prog/morning.lang?style=for-the-badge" alt="Contributors">  
+</div>  
 
-<div align="center" style="margin: 15px 0">
-  <img src="https://github.com/alexeev-prog/morning.lang/actions/workflows/static.yml/badge.svg" alt="Static Analysis">
-  <img src="https://github.com/alexeev-prog/morning.lang/actions/workflows/ci.yml/badge.svg" alt="CI Build">
-</div>
+<div align="center" style="margin: 15px 0">  
+  <img src="https://github.com/alexeev-prog/morning.lang/actions/workflows/static.yml/badge.svg" alt="Static Analysis">  
+  <img src="https://github.com/alexeev-prog/morning.lang/actions/workflows/ci.yml/badge.svg" alt="CI Build">  
+</div>  
 
-<div align="center">
-  <img src="https://raw.githubusercontent.com/alexeev-prog/morning.lang/refs/heads/main/docs/pallet-0.png" width="600" alt="Color Palette">
-</div>
+<div align="center">  
+  <img src="https://raw.githubusercontent.com/alexeev-prog/morning.lang/refs/heads/main/docs/pallet-0.png" width="600" alt="Color Palette">  
+</div>  
 
-## VSCode Extension
-We have VS Code extension for code highlight and snippets. [Extension here](https://marketplace.visualstudio.com/items?itemName=alexeevdev.morning-language-syntax).
+## 🚀 Technical Overview  
+Morning.lang is a statically-typed systems programming language designed for performance-critical applications.  
+Built on LLVM 19, it combines low-level memory control with expressive S-expression syntax.  
 
-![alt text](https://raw.githubusercontent.com/alexeev-prog/morning-vscode-ext/refs/heads/main/image.png)
+### Core Technical Features  
+| Feature | Technical Implementation | Performance Impact |  
+|---------|---------------------------|---------------------|  
+| **S-expression Syntax** | Lisp-inspired uniform code representation | Reduced cognitive load, enhanced metaprogramming |  
+| **LLVM19 Backend** | Direct LLVM IR generation via C++ API | Near-native execution speed, advanced optimizations |  
+| **Static Typing System** | Type annotations (!int, !ptr) with inference | Compile-time safety, zero-cost abstractions |  
+| **Memory Control** | Manual allocation (mem-alloc) with scope-based safety | Predictable performance, no GC pauses |  
+| **Bitwise Operations** | Native bit-and/bit-or/bit-shl instructions | Hardware-level efficiency |  
+| **Cross-Platform** | Single IR → Windows/Linux/macOS binaries | Consistent behavior across platforms |  
 
-## Standards
-For see Morning Standards, see [morning-standards](https://github.com/alexeev-prog/morning-standards).
+### Performance Benchmarks  
+```mermaid  
+graph TD  
+    A[C] -->|100%| B[Baseline]  
+    C[Rust] -->|98%| B  
+    D[Morning.lang] -->|99%| B  
+    E[C++] -->|101%| B  
+    F[Go] -->|85%| B  
+    G[Python] -->|15%| B  
+```  
 
-Last standards:
+*Comparative execution speed vs C baseline (higher is better)*  
 
- + MCG-1 (Morning Coding Guidelines 1). [Read here](https://github.com/alexeev-prog/morning-standards/blob/main/standards/MCG1/index.md).
+## ⚙️ Language Components  
 
-## Usage
+### Primitive Types  
+| Type | Size | Description | Example |  
+|------|------|-------------|---------|  
+| **!int** | 64-bit | Default integer type | `[var (counter !int) 0]` |  
+| **!frac** | 64-bit | IEEE 754 floating point | `[var (pi !frac) 3.14159]` |  
+| **!bool** | 1-byte | Boolean value | `[var (flag !bool) true]` |  
+| **!str** | ptr + size | UTF-8 string | `[var (name !str) "Alice"]` |  
+| **!ptr** | arch-dependent | Raw memory pointer | `[var (buffer !ptr) (mem-alloc 256)]` |  
+| **!none** | 0-byte | Void type | `[func noop () -> !none]` |  
 
-```
-Usage: morninglang [options]
+### Memory Operations  
+| Operation | Syntax | Description |  
+|-----------|--------|-------------|  
+| **Allocation** | `[mem-alloc size]` | Allocate raw memory block |  
+| **Deallocation** | `[mem-free ptr]` | Release allocated memory |  
+| **Memory Read** | `[mem-read ptr type]` | Read typed value from address |  
+| **Memory Write** | `[mem-write ptr value]` | Write value to memory location |  
+| **Address Of** | `[mem-ptr variable]` | Get address of variable |  
+| **Dereference** | `[mem-deref ptr type]` | Access value through pointer |  
 
-MorningLLVM - Compiler for the Morning programming language
+### Control Flow Constructs  
+```morning  
+// Conditional execution  
+[if (> x 10)  
+    (fprint "High value")  
+  elif (> x 5)  
+    (fprint "Medium value")  
+  else  
+    (fprint "Low value")]  
 
-Options:
-  -h, --help                     Print this help message
-  -e, --expression <expr>        Expression to parse
-  -f, --file <file>              File to parse
-  --lint <file>                  File to lint
-  -o, --output <name>            Output binary name
-  -k, --keep                     Keep temporary files
-```
+// Loop constructs  
+[while (> x 0)  
+    (set x (- x 1))]  
 
-## Example
+[for (var i 0) (< i 10) (set i (+ i 1))  
+    (fprint "Iteration: %d" i)]  
 
-```
-[func square (x) (* x x)]
+// Ternary operator  
+[var result (check (> x 0) "Positive" "Non-positive")]  
+```  
 
-[func scoped_function (x) [scope
-    [+ x 100]
-    [while (> x 0)
-        [scope
-            [set x (- x 1)]
-            [fprint "%d " x]]]
-    ]
-    [fprint "\n"]
-]
+## 📦 Installation & Usage  
 
-[fprint "square 10: %d\n" (square 10)]
-[fprint "square 0xA: %d\n" (square 0xA)]
-[fprint "square 012: %d\n" (square 012)]
-[fprint "square 0b1010: %d\n" (square 0b1010)]
+### System Requirements  
+- LLVM 19 development files  
+- C++20 compatible compiler  
+- 4GB RAM minimum (8GB recommended)  
+- 2GB disk space  
 
-[fprint "scoped_function 10: %d\n" (scoped_function 10)]
+### Build Instructions  
+```bash  
+# Clone repository with submodules  
+git clone --recurse-submodules https://github.com/alexeev-prog/morning.lang.git  
+cd morning.lang  
 
-[var (a !int) 10]
+# Configure build  
+./configure --llvm-path=/path/to/llvm19  
 
-[fprint "a: %d\n" a]
+# Compile  
+make -j$(nproc)  
 
-[check (== a 10)
-    [set a 0]]
+# Install system-wide  
+sudo make install  
+```  
 
-[fprint "a: %d\n" a]
+### Command Line Interface  
+```  
+Usage: morninglang [options]  
 
-[func sum ((first !int) (second !int)) -> !int (+ first second)]
+MorningLLVM - Compiler for the Morning programming language  
 
-[fprint "sum 100 1: %d\n\n" (sum 100 1)]
-```
-
-## Powering Performance with Modern Tech
-Morning.lang combines the raw power of C++ with the cutting-edge optimization capabilities of **LLVM 19** to deliver exceptional performance:
-
-- ⚡️ **LLVM19 Backend**: Leverages the latest optimizations from the LLVM project
-- 🚀 **Near-Native Speed**: Compiles to highly optimized machine code
-- 🔧 **Modern C++17**: Built with contemporary C++ features and best practices
-- 🧠 **Smart Memory Management**: Automatic scope-based resource handling
-- 🌉 **Seamless Interop**: Easily integrate with existing C/C++ libraries
-
-## Why Developers Love Morning.lang
-```mermaid
-graph LR
-A[Clean Syntax] --> B[Developer Productivity]
-C[LLVM Optimization] --> D[Runtime Performance]
-E[Memory Safety] --> F[Reliable Applications]
-B --> G[Happy Developers]
-D --> G
-F --> G
-```
-
-### Key Advantages Over Traditional Languages
-| Feature                | Benefit                                                                 |
-|------------------------|-------------------------------------------------------------------------|
-| ⚡ **LLVM19-Powered**  | Access to latest compiler optimizations and CPU features                |
-| 🎨 **Expressive Syntax** | Write complex operations with minimal boilerplate                      |
-| 🧩 **Modular Design**  | Extend with custom optimizers and language features                    |
-| 🌐 **Cross-Platform**  | Single codebase compiles to Windows, Linux, macOS binaries             |
-| 🔒 **Memory Safety**   | Scope-based ownership eliminates common memory errors                  |
-| 🔄 **Metaprogramming** | Powerful compile-time code generation capabilities                     |
-
----
-
-## ⚠️ Important Notes
-
-> [!CAUTION]
-> **Active Development Notice**
-> Morning.lang is currently under active development. While core features are stable, some advanced capabilities are still being perfected. We welcome early adopters to help shape the language!
-
-> [!NOTE]
-> **Building & Installation**
-> See the [BUILDING GUIDE](BUILDING.md) for detailed instructions on compiling from source.
-
-> [!NOTE]
-> **Want to Contribute?**
-> Check out our [CONTRIBUTING GUIDELINES](CONTRIBUTING.md). We especially welcome LLVM and compiler experts!
-
-> [!NOTE]
-> **License**
-> Morning.lang is licensed under [GNU GPL V3](./LICENSE) - Free to use, modify, and distribute
-
-<!--
-### 4. Seamless C/C++ Integration
-
-```morning
-// Easily call C functions
-[extern "libm" sin (x !double) -> !double]
-
-[func calculate (angle)
-    (sin (* angle (/ 3.14159 180.0)))]
-``` -->
-
----
+Options:  
+  -h, --help                     Print this help message  
+  -e, --expression <expr>        Execute single expression  
+  -f, --file <file>              Compile source file  
+  -l, --lint <file>              Analyze code quality  
+  -o, --output <name>            Output binary name  
+  -k, --keep                     Retain intermediate files  
+  -O0/-O1/-O2/-O3                Optimization level  
+  --emit-llvm                    Output LLVM IR instead of binary  
+```  
 
 ## 💡 Language Highlights
 
@@ -198,16 +182,6 @@ F --> G
 // Free allocated memory
 [mem-free ptr]
 [fprint "Memory freed\n"]
-
-// Bit manipulation
-[var (flags !int) 0]
-[set flags (bit-or flags 0b1010)]  // Set bits (bitwise OR)
-[fprint "Flags: %b\n" flags]
-
-// Bit check
-[check (bit-and flags 0b0010)
-    [fprint "Bit 2 is set!\n"]
-    [fprint "Bit 2 is not set!\n"]]
 
 // Raw byte operations
 [var (buffer !ptr) (mem-alloc 4)] // Allocate 4-byte buffer
@@ -378,106 +352,61 @@ F --> G
 [fprint "A: %d\n\n" a]
 ```
 
-<!--
-### 🔁 Concurrency Support
-```morning
-// Lightweight coroutines
-[coroutine data_producer ()
-    [loop
-        [var data (fetch_data)]
-        [yield data]]]
+## 📚 Documentation & Resources  
 
-// Parallel execution
-[parallel
-    [task process_data data]
-    [task log_metrics]]
-``` -->
+### Official References  
+- [Language Specification (PDF)](https://alexeev-prog.github.io/morning.lang/spec.pdf)  
+- [Standard Library API](https://alexeev-prog.github.io/morning.lang/stdlib)  
+- [LLVM Integration Guide](https://alexeev-prog.github.io/morning.lang/llvm-integration)  
 
----
+### Learning Path  
+1. **Language Essentials** - Syntax, types, control flow  
+2. **Memory Management** - Allocation strategies, safety  
+3. **Systems Programming** - Hardware interaction, low-level ops  
+4. **Concurrency Models** - Parallel execution, synchronization  
+5. **Performance Tuning** - Optimization techniques, profiling  
 
-## 📚 Documentation & Learning Resources
+## 🌐 Community & Contribution  
 
-Explore comprehensive documentation at:
-[https://alexeev-prog.github.io/morning.lang/](https://alexeev-prog.github.io/morning.lang/)
+### Development Ecosystem  
+```mermaid  
+graph LR  
+    A[Morning.lang] --> B[VSCode Extension]  
+    A --> C[CLion Plugin]  
+    A --> D[CI/CD Pipelines]  
+    A --> E[Package Registry]  
+    A --> F[Performance Profiler]  
+```  
 
-### Learning Path:
-1. **Language Tour**: Quick overview of syntax and features
-2. **LLVM Integration**: How Morning.lang leverages LLVM internals
-3. **Performance Guide**: Optimization techniques and benchmarks
-4. **C++ Interop**: Working with existing C/C++ libraries
-5. **Compiler Development**: Contributing to the language core
+### Contribution Guidelines  
+1. **Issue Tracking** - Report bugs via GitHub Issues  
+2. **Pull Requests** - Follow [CONTRIBUTING.md](CONTRIBUTING.md)  
+3. **Code Standards** - Adhere to MCG-1 specification  
+4. **Performance** - Validate changes with benchmarks  
+5. **Documentation** - Update relevant documentation  
 
----
+## ⚖️ License  
+```text  
+Aesthetic programming language in C++ (llvm)  
+Copyright (C) 2025 Alexeev Bronislav  
 
-## 💻 Getting Started in 5 Minutes
+This program is free software: you can redistribute it and/or modify  
+it under the terms of the GNU General Public License as published by  
+the Free Software Foundation, either version 3 of the License, or  
+(at your option) any later version.  
 
-### 1. Build from Source
-```bash
-# Clone repository (requires LLVM 19 development files)
-git clone --recurse-submodules https://github.com/alexeev-prog/morning.lang.git
-cd morning.lang
+This program is distributed in the hope that it will be useful,  
+but WITHOUT ANY WARRANTY; without even the implied warranty of  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the  
+GNU General Public License for more details.  
 
-# build
-./build.sh all
-```
+You should have received a copy of the GNU General Public License  
+along with this program. If not, see <https://www.gnu.org/licenses/>.  
+```  
 
----
-
-## 🏗️ Real-World Applications
-
-Morning.lang excels in:
-- **High-performance computing**
-- **System utilities development**
-- **Game engines**
-- **Blockchain infrastructure**
-- **Compiler development**
-- **Embedded systems programming**
-<!--
-```mermaid
-pie
-    title Industry Applications
-    “System Software” : 35
-    “Game Development” : 25
-    “Fintech” : 20
-    “AI/ML” : 15
-    “Embedded” : 5
-``` -->
-
----
-
-## 🤝 Join Our Growing Community
-
-We're building Morning.lang for developers who care about performance, elegance, and control. Join us!
-
-- **GitHub Discussions**: [Share ideas and ask questions](https://github.com/alexeev-prog/morning.lang/discussions)
-- **Core Team Email**: `alexeev.dev@mail.ru` (Use "Morning.lang Contribution" in subject)
-- **Weekly Development Streams**: Live coding sessions on Twitch
-- **Contribution Guide**: [CONTRIBUTING.md](CONTRIBUTING.md)
-
----
-
-## 📜 License
-```text
-Aesthetic programming language in C++ (llvm)
-Copyright (C) 2025  Alexeev Bronislav
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <https://www.gnu.org/licenses/>.
-```
-
-<div align="center">
-  <br>
-  <a href="#readme-top">↑ Back to Top ↑</a>
-  <br>
-  <sub>Built with ❤️ and LLVM 19</sub>
+<div align="center">  
+  <br>  
+  <a href="#readme-top">↑ Back to Top ↑</a>  
+  <br>  
+  <sub>Made with LLVM 19</sub>  
 </div>

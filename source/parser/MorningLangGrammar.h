@@ -27,6 +27,7 @@
 #include <regex>
 #include <sstream>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <assert.h>
@@ -73,6 +74,9 @@ static inline std::string __EOF("$");
 struct Exp {
     ExpType type;
 
+    int line;
+    int column;
+
     int number;
     double fractional;
     std::string string;
@@ -98,7 +102,7 @@ struct Exp {
 
     Exp(std::vector<Exp> list)
         : type(ExpType::LIST)
-        , list(list) {}
+        , list(std::move(list)) {}
 
     auto to_string() const -> std::string {
         switch (type) {
@@ -321,7 +325,7 @@ namespace syntax {
         /**
          * Exits a current state popping it from the states stack.
          */
-        TokenizerState popState() {
+        auto popState() -> TokenizerState {
             auto state = states_.back();
             states_.pop_back();
             return state;
@@ -330,7 +334,7 @@ namespace syntax {
         /**
          * Returns next token.
          */
-        SharedToken getNextToken() {
+        auto getNextToken() -> SharedToken {
             if (!hasMoreTokens()) {
                 yytext = __EOF;
                 return toToken(TokenType::__EOF);

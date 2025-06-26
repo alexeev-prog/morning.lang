@@ -1,6 +1,7 @@
 #include "arithmetic.hpp"
 
 #include "../utils/cast.hpp"
+#include "../utils/convert.hpp"
 
 using namespace llvm;
 
@@ -102,6 +103,11 @@ auto ArithmeticCodegen::generate_binary_op(const std::string& op,
             return builder.CreateICmpNE(left, right, "icmp_tmp");
         }
     }
+
+    LOG_ERROR("Unsupported operation '%s' for types %s and %s",
+                 operation.c_str(),
+                 type_to_string(left->getType()).c_str(),
+                 type_to_string(right->getType()).c_str());
 
     return nullptr;
 }

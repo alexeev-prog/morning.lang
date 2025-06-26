@@ -32,6 +32,7 @@
 #include "parser/MorningLangGrammar.h"
 #include "tracelogger.hpp"
 #include "utils/cast.hpp"
+#include "utils/convert.hpp"
 
 namespace {
     /**
@@ -48,40 +49,6 @@ namespace {
         auto tabed = std::regex_replace(newlined, regex_tab, "\t");
 
         return tabed;
-    }
-
-    auto type_to_string(llvm::Type* type) -> std::string {
-        std::string type_str;
-
-        llvm::raw_string_ostream rso(type_str);
-
-        type->print(rso);
-
-        auto value = rso.str();
-
-        if (value == "i64") {
-            return "!int64";
-        }
-        if (value == "i32") {
-            return "!int64";
-        }
-        if (value == "i16") {
-            return "!int64";
-        }
-        if (value == "i8") {
-            return "!int64";
-        }
-        if (value == "ptr") {
-            return "!str";
-        }
-        if (value == "double") {
-            return "!frac";
-        }
-        if (type_str == "i1") return "!bool";
-        if (type_str == "void") return "!none";
-        if (type_str == "i8*") return "!str";
-
-        return value;
     }
 
     /**
@@ -425,6 +392,15 @@ auto MorningLanguageLLVM::extract_function_type(const Exp& fn_exp) -> llvm::Func
 auto MorningLanguageLLVM::alloc_var(const std::string& name, llvm::Type* var_type, const env& env)
     -> llvm::Value* {
     LOG_TRACE
+
+    if (var_type == nullptr) {
+        LOG_ERROR("Null type for variable '%s'", name.c_str());
+        return nullptr;
+    }
+
+    if (env->lookup_by_name(name) != nullptr) {
+        LOG_WARN("Redeclaration of variable '%s'", name.c_str());
+    }
 
     m_VARS_BUILDER->SetInsertPoint(&m_ACTIVE_FUNCTION->getEntryBlock());
 
@@ -925,6 +901,11 @@ auto MorningLanguageLLVM::generate_expression(const Exp& exp, const env& env) ->
                 // Func
                 if (oper == "func") {
                     LOG_DEBUG("Process function: %s", exp.list[1].string.c_str());
+
+                    if (exp.list.size() < 4) {
+                        LOG_CRITICAL("Function definition requires at least 3 parts (name, params, body)");
+                        return m_IR_BUILDER->getInt64(0);
+                    }
 
                     auto* fn = compile_function(exp, /* name */ exp.list[1].string, env);
                     env->define(exp.list[1].string, fn);
