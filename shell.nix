@@ -13,6 +13,7 @@ let
     stb
     entt
     ncurses
+    lld
     gcc
     lld
     bolt

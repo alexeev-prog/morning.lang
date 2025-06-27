@@ -1,4 +1,4 @@
-(var height 0)
+(var (height !int))
 
 (fprint "Enter height: ")
 (finput "%d" height)

@@ -1,7 +1,7 @@
 #include <llvm/IR/Type.h>
 #include "../logger.hpp"
 
-auto type_to_string(llvm::Type* type) -> std::string {
+inline auto type_to_string(llvm::Type* type) -> std::string {
         std::string type_str;
 
         llvm::raw_string_ostream rso(type_str);

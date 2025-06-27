@@ -50,3 +50,4 @@ venv/
 pyproject.toml
 program
 *.morning
+.idea/

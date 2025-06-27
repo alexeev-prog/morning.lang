@@ -14,6 +14,8 @@ include(cmake/project-is-top-level.cmake)
 include(cmake/variables.cmake)
 
 find_package(LLVM REQUIRED CONFIG)
+find_package(LLD REQUIRED CONFIG)
+
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -finput-charset=UTF-8 -Waddress -O1 -pedantic-errors -Wall -Wextra -Wpedantic -Wcast-align -Wcast-qual -Wconversion -Wctor-dtor-privacy -Wextra-semi -Wfloat-equal -Wnon-virtual-dtor -Wold-style-cast -Woverloaded-virtual -Wredundant-decls -Wsign-conversion")
 
@@ -26,17 +28,18 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEAS
 
 include_directories(${LLVM_INCLUDE_DIRS})
 add_definitions(${LLVM_DEFINITIONS})
-llvm_map_components_to_libnames(llvm_libs support core irreader)
+llvm_map_components_to_libnames(llvm_libs support core irreader TargetParser Target)
 
 add_library(
     morninglang_lib OBJECT
     source/tracelogger.cpp
     source/morningllvm.cpp
     source/logger.cpp
-    source/linter.cpp
+    source/compiler.cpp
+    source/input_parser.cpp
     source/codegen/arithmetic.cpp
 )
-target_link_libraries(morninglang_lib ${llvm_libs})
+target_link_libraries(morninglang_lib ${llvm_libs} lldELF)
 target_link_libraries(morninglang_lib
     LLVMPasses
     LLVMX86CodeGen

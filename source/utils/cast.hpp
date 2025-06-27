@@ -30,17 +30,5 @@ inline auto implicit_cast(
         return builder.CreatePointerCast(value, target_type, "cast_ptr");
     }
 
-    if (value->getType()->isIntegerTy() && target_type->isIntegerTy()) {
-        unsigned value_bits = value->getType()->getIntegerBitWidth();
-        unsigned target_bits = target_type->getIntegerBitWidth();
-
-        if (value_bits < target_bits) {
-            return builder.CreateZExt(value, target_type, "zext_cast");
-        } else if (value_bits > target_bits) {
-            return builder.CreateTrunc(value, target_type, "trunc_cast");
-        }
-        return value;
-    }
-
     return value;
 }

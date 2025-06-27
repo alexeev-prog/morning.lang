@@ -1,11 +1,10 @@
 #include "arithmetic.hpp"
-
 #include "../utils/cast.hpp"
-#include "../utils/convert.hpp"
 
 using namespace llvm;
 
-const std::unordered_map<std::string, std::string> ArithmeticCodegen::m_OP_MAPPING = {
+const std::unordered_map<std::string, std::string>
+ArithmeticCodegen::m_OP_MAPPING = {
     {"__PLUS_OPERAND__", "+"},
     {"__SUB_OPERAND__", "-"},
     {"__MUL_OPERAND__", "*"},
@@ -15,9 +14,13 @@ const std::unordered_map<std::string, std::string> ArithmeticCodegen::m_OP_MAPPI
     {"__CMPGE__", ">="},
     {"__CMPLE__", "<="},
     {"__CMPEQ__", "=="},
-    {"__CMPNE__", "!="}};
+    {"__CMPNE__", "!="}
+};
 
-auto ArithmeticCodegen::get_common_type(Value* left, Value* right) -> Type* {
+auto ArithmeticCodegen::get_common_type(
+    Value* left,
+    Value* right
+) -> Type* {
     Type* left_type = left->getType();
     Type* right_type = right->getType();
 
@@ -27,10 +30,12 @@ auto ArithmeticCodegen::get_common_type(Value* left, Value* right) -> Type* {
     return left_type;
 }
 
-auto ArithmeticCodegen::generate_binary_op(const std::string& op,
-                                           Value* left,
-                                           Value* right,
-                                           IRBuilder<>& builder) -> Value* {
+auto ArithmeticCodegen::generate_binary_op(
+    const std::string& op,
+    Value* left,
+    Value* right,
+    IRBuilder<>& builder
+) -> Value* {
     std::string operation = op;
     if (auto it = m_OP_MAPPING.find(op); it != m_OP_MAPPING.end()) {
         operation = it->second;
@@ -41,73 +46,29 @@ auto ArithmeticCodegen::generate_binary_op(const std::string& op,
     right = implicit_cast(right, common_type, builder);
 
     if (common_type->isDoubleTy()) {
-        if (operation == "+") {
-            return builder.CreateFAdd(left, right, "fadd_tmp");
-        }
-        if (operation == "-") {
-            return builder.CreateFSub(left, right, "fsub_tmp");
-        }
-        if (operation == "*") {
-            return builder.CreateFMul(left, right, "fmul_tmp");
-        }
-        if (operation == "/") {
-            return builder.CreateFDiv(left, right, "fdiv_tmp");
-        }
-        if (operation == ">") {
-            return builder.CreateFCmpOGT(left, right, "fcmp_tmp");
-        }
-        if (operation == "<") {
-            return builder.CreateFCmpOLT(left, right, "fcmp_tmp");
-        }
-        if (operation == ">=") {
-            return builder.CreateFCmpOGE(left, right, "fcmp_tmp");
-        }
-        if (operation == "<=") {
-            return builder.CreateFCmpOLE(left, right, "fcmp_tmp");
-        }
-        if (operation == "==") {
-            return builder.CreateFCmpOEQ(left, right, "fcmp_tmp");
-        }
-        if (operation == "!=") {
-            return builder.CreateFCmpONE(left, right, "fcmp_tmp");
-        }
-    } else {
-        if (operation == "+") {
-            return builder.CreateAdd(left, right, "add_tmp");
-        }
-        if (operation == "-") {
-            return builder.CreateSub(left, right, "sub_tmp");
-        }
-        if (operation == "*") {
-            return builder.CreateMul(left, right, "mul_tmp");
-        }
-        if (operation == "/") {
-            return builder.CreateSDiv(left, right, "div_tmp");
-        }
-        if (operation == ">") {
-            return builder.CreateICmpSGT(left, right, "icmp_tmp");
-        }
-        if (operation == "<") {
-            return builder.CreateICmpSLT(left, right, "icmp_tmp");
-        }
-        if (operation == ">=") {
-            return builder.CreateICmpSGE(left, right, "icmp_tmp");
-        }
-        if (operation == "<=") {
-            return builder.CreateICmpSLE(left, right, "icmp_tmp");
-        }
-        if (operation == "==") {
-            return builder.CreateICmpEQ(left, right, "icmp_tmp");
-        }
-        if (operation == "!=") {
-            return builder.CreateICmpNE(left, right, "icmp_tmp");
-        }
+        if (operation == "+") return builder.CreateFAdd(left, right, "fadd_tmp");
+        if (operation == "-") return builder.CreateFSub(left, right, "fsub_tmp");
+        if (operation == "*") return builder.CreateFMul(left, right, "fmul_tmp");
+        if (operation == "/") return builder.CreateFDiv(left, right, "fdiv_tmp");
+        if (operation == ">") return builder.CreateFCmpOGT(left, right, "fcmp_tmp");
+        if (operation == "<") return builder.CreateFCmpOLT(left, right, "fcmp_tmp");
+        if (operation == ">=") return builder.CreateFCmpOGE(left, right, "fcmp_tmp");
+        if (operation == "<=") return builder.CreateFCmpOLE(left, right, "fcmp_tmp");
+        if (operation == "==") return builder.CreateFCmpOEQ(left, right, "fcmp_tmp");
+        if (operation == "!=") return builder.CreateFCmpONE(left, right, "fcmp_tmp");
     }
-
-    LOG_ERROR("Unsupported operation '%s' for types %s and %s",
-                 operation.c_str(),
-                 type_to_string(left->getType()).c_str(),
-                 type_to_string(right->getType()).c_str());
+    else {
+        if (operation == "+") return builder.CreateAdd(left, right, "add_tmp");
+        if (operation == "-") return builder.CreateSub(left, right, "sub_tmp");
+        if (operation == "*") return builder.CreateMul(left, right, "mul_tmp");
+        if (operation == "/") return builder.CreateSDiv(left, right, "div_tmp");
+        if (operation == ">") return builder.CreateICmpSGT(left, right, "icmp_tmp");
+        if (operation == "<") return builder.CreateICmpSLT(left, right, "icmp_tmp");
+        if (operation == ">=") return builder.CreateICmpSGE(left, right, "icmp_tmp");
+        if (operation == "<=") return builder.CreateICmpSLE(left, right, "icmp_tmp");
+        if (operation == "==") return builder.CreateICmpEQ(left, right, "icmp_tmp");
+        if (operation == "!=") return builder.CreateICmpNE(left, right, "icmp_tmp");
+    }
 
     return nullptr;
 }

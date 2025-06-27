@@ -25,26 +25,28 @@ class Environment : public std::enable_shared_from_this<Environment> {
         return value;
     }
 
-    auto lookup_by_name(const std::string& var_name) -> llvm::Value* {
+    auto lookup_by_name(const std::string& var_name, bool raise_error = true) -> llvm::Value* {
         LOG_TRACE
 
-        return resolve(var_name)->m_RECORD[var_name];
+        return resolve(var_name, raise_error)->m_RECORD[var_name];
     }
 
   private:
-    auto resolve(const std::string& name) -> std::shared_ptr<Environment> {
+    auto resolve(const std::string& name, bool raise_error) -> std::shared_ptr<Environment> {
         LOG_TRACE
 
         if (m_RECORD.find(name) != m_RECORD.end()) {
             return shared_from_this();
         }
 
-        if (m_PARENT == nullptr) {
-            LOG_CRITICAL("Variable \"%s\" is not defined", name.c_str());
-            return nullptr;    // Never reached but for safety
+        if (raise_error) {
+            if (m_PARENT == nullptr) {
+                LOG_CRITICAL("Variable \"%s\" is not defined", name.c_str());
+                return nullptr;    // Never reached but for safety
+            }
         }
 
-        return m_PARENT->resolve(name);
+        return m_PARENT->resolve(name, raise_error);
     }
 
     std::map<std::string, llvm::Value*> m_RECORD;
