@@ -33,7 +33,6 @@
 #include "tracelogger.hpp"
 #include "utils/cast.hpp"
 #include "utils/convert.hpp"
-#include "compiler.hpp"
 
 namespace {
     /**
@@ -171,7 +170,7 @@ MorningLanguageLLVM::MorningLanguageLLVM()
     setup_global_environment();
 }
 
-auto MorningLanguageLLVM::execute(const std::string& program, const std::string& output_base, bool compile_raw_object_file) -> int {
+auto MorningLanguageLLVM::execute(const std::string& program, const std::string& output_base) -> int {
     LOG_TRACE
 
     auto ast = m_PARSER->parse("[scope " + program + "]");
@@ -179,17 +178,6 @@ auto MorningLanguageLLVM::execute(const std::string& program, const std::string&
 
     llvm::verifyModule(*m_MODULE, &llvm::errs());
     save_module_to_file(output_base + ".ll");
-
-    llvm_compiler compiler;
-    std::string object_filename = std::string("_" + output_base + ".o");
-
-    if (compile_raw_object_file) {
-        if (compiler.compile_module_to_object_file(*m_MODULE, object_filename)) {
-            LOG_INFO("Successfully compile raw object file: %s", object_filename.c_str());
-        } else {
-            LOG_ERROR("Error when compiling object file");
-        }
-    }
 
     return 0;
 }
@@ -242,8 +230,6 @@ auto MorningLanguageLLVM::create_global_variable(const std::string& name,
     variable->setAlignment(llvm::MaybeAlign(4));
     variable->setConstant(!is_mutable);
     variable->setInitializer(init_value);
-
-    m_VAR_TYPES[name] = init_value->getType();
 
     return variable;
 }
@@ -403,9 +389,8 @@ auto MorningLanguageLLVM::extract_function_type(const Exp& fn_exp) -> llvm::Func
     return llvm::FunctionType::get(return_type, param_types, /* varargs */ false);
 }
 
-auto MorningLanguageLLVM::alloc_var(const std::string& name,
-                                    llvm::Type* var_type,
-                                    const env& env) -> llvm::Value* {
+auto MorningLanguageLLVM::alloc_var(const std::string& name, llvm::Type* var_type, const env& env)
+    -> llvm::Value* {
     LOG_TRACE
 
     if (var_type == nullptr) {
@@ -413,11 +398,16 @@ auto MorningLanguageLLVM::alloc_var(const std::string& name,
         return nullptr;
     }
 
-    // Removed redeclaration check - causes false positives for new variables
+    if (env->lookup_by_name(name) != nullptr) {
+        LOG_WARN("Redeclaration of variable '%s'", name.c_str());
+    }
+
     m_VARS_BUILDER->SetInsertPoint(&m_ACTIVE_FUNCTION->getEntryBlock());
+
     auto* allocated_var = m_VARS_BUILDER->CreateAlloca(var_type, nullptr, name);
+
     env->define(name, allocated_var);
-    m_VAR_TYPES[name] = var_type;
+
     return allocated_var;
 }
 
@@ -438,14 +428,28 @@ auto MorningLanguageLLVM::compile_function(const Exp& fn_exp, const std::string&
     auto fn_env = std::make_shared<Environment>(std::map<std::string, llvm::Value*>(), env);
     fn_env->define(fn_name, new_fn);
 
+    // Process parameters
     for (auto& arg : m_ACTIVE_FUNCTION->args()) {
-        auto param = params.list[idx++];
-        auto arg_name = extract_var_name(param);
+        if (idx >= params.list.size()) {
+            LOG_CRITICAL("Too many arguments for function '%s'", fn_name.c_str());
+        }
 
+        auto param = params.list[idx];
+        auto arg_name = extract_var_name(param);
         arg.setName(arg_name);
 
-        auto* arg_binding = alloc_var(arg_name, arg.getType(), fn_env);
+        // Get parameter type
+        llvm::Type* param_type = nullptr;
+        if (param.type == ExpType::LIST && param.list.size() >= 2) {
+            param_type = get_type(param.list[1].string, arg_name);
+        } else {
+            param_type = arg.getType();
+        }
+
+        // Allocate and store parameter
+        auto* arg_binding = alloc_var(arg_name, param_type, fn_env);
         m_IR_BUILDER->CreateStore(&arg, arg_binding);
+        idx++;
     }
 
     m_IR_BUILDER->CreateRet(generate_expression(body, fn_env));
@@ -490,19 +494,30 @@ auto MorningLanguageLLVM::generate_expression(const Exp& exp, const env& env) ->
                 auto var_name = exp.string;
                 auto* value = env->lookup_by_name(var_name);
 
-                if (auto* local_var = llvm::dyn_cast<llvm::AllocaInst>(value)) {
-                    return m_IR_BUILDER->CreateLoad(
-                        local_var->getAllocatedType(), local_var, var_name.c_str());
+                // Handle functions separately
+                if (llvm::isa<llvm::Function>(value)) {
+                    return value;
                 }
 
-                if (auto* global_var = llvm::dyn_cast<llvm::GlobalVariable>(value)) {
-                    return m_IR_BUILDER->CreateLoad(
-                        global_var->getInitializer()->getType(), global_var, var_name.c_str());
+                // Handle opaque pointers (LLVM 19+)
+                if (value->getType()->isPointerTy()) {
+                    // Get pointee type from allocation
+                    llvm::Type* pointee_type = nullptr;
+                    if (auto* alloca = llvm::dyn_cast<llvm::AllocaInst>(value)) {
+                        pointee_type = alloca->getAllocatedType();
+                    }
+                    else if (auto* global = llvm::dyn_cast<llvm::GlobalVariable>(value)) {
+                        pointee_type = global->getValueType();
+                    }
+
+                    if (pointee_type) {
+                        return m_IR_BUILDER->CreateLoad(pointee_type, value, var_name.c_str());
+                    }
                 }
 
-                return value;
+                // Default load
+                return m_IR_BUILDER->CreateLoad(value->getType(), value, var_name.c_str());
             }
-            return m_MODULE->getNamedGlobal(exp.string)->getInitializer();
         case ExpType::LIST:
             if (exp.list.empty()) {
                 LOG_CRITICAL("Empty list expression at line %s", exp.list[1].string.c_str());
@@ -707,26 +722,17 @@ auto MorningLanguageLLVM::generate_expression(const Exp& exp, const env& env) ->
                 }
 
                 if (oper == "mem-read") {
-                    auto* ptr_val = generate_expression(exp.list[1], env);
-                    auto* target_type = get_type(exp.list[2].string, "mem_read");
-                    // Create bitcast without element type
-                    auto* casted_ptr = m_IR_BUILDER->CreateBitCast(ptr_val,
-                        llvm::PointerType::get(*m_CONTEXT, 0));
+                    LOG_DEBUG("Process memory read");
+
+                    auto ptr_exp = exp.list[1];
+                    auto type_exp = exp.list[2];
+                    auto* ptr_val = generate_expression(ptr_exp, env);
+                    auto* target_type = get_type(type_exp.string, "mem_read");
+
+                    auto* casted_ptr =
+                        m_IR_BUILDER->CreateBitCast(ptr_val, target_type->getPointerTo(), "cast_ptr");
                     return m_IR_BUILDER->CreateLoad(target_type, casted_ptr, "load");
                 }
-
-                // if (oper == "mem-read") {
-                //     LOG_DEBUG("Process memory read");
-
-                //     auto ptr_exp = exp.list[1];
-                //     auto type_exp = exp.list[2];
-                //     auto* ptr_val = generate_expression(ptr_exp, env);
-                //     auto* target_type = get_type(type_exp.string, "mem_read");
-
-                //     auto* casted_ptr =
-                //         m_IR_BUILDER->CreateBitCast(ptr_val, target_type->getPointerTo(), "cast_ptr");
-                //     return m_IR_BUILDER->CreateLoad(target_type, casted_ptr, "load");
-                // }
 
                 if (oper == "mem-ptr") {
                     LOG_DEBUG("Process get pointer");
@@ -922,18 +928,13 @@ auto MorningLanguageLLVM::generate_expression(const Exp& exp, const env& env) ->
                 // Func
                 if (oper == "func") {
                     LOG_DEBUG("Process function: %s", exp.list[1].string.c_str());
+
                     if (exp.list.size() < 4) {
-                        LOG_CRITICAL("Function definition requires at least 3 parts");
+                        LOG_CRITICAL("Function definition requires at least 3 parts (name, params, body)");
+                        return m_IR_BUILDER->getInt64(0);
                     }
 
-                    // Extract parameter names and types
-                    std::vector<std::string> param_names;
-                    for (auto& param : exp.list[2].list) {
-                        param_names.push_back(extract_var_name(param));
-                    }
-
-                    // Compile function with parameters
-                    auto* fn = compile_function(exp, exp.list[1].string, env);
+                    auto* fn = compile_function(exp, /* name */ exp.list[1].string, env);
                     env->define(exp.list[1].string, fn);
                     return fn;
                 }
@@ -976,91 +977,54 @@ auto MorningLanguageLLVM::generate_expression(const Exp& exp, const env& env) ->
                 if (oper == "for") {
                     LOG_DEBUG("Process for loop");
 
-                    // Validate structure
-                    if (exp.list.size() < 5) {
-                        LOG_CRITICAL("Malformed 'for' loop: expected 4 components (init, cond, step, body)");
-                    }
-
                     auto init = exp.list[1];
                     auto condition = exp.list[2];
                     auto step = exp.list[3];
                     auto body = exp.list[4];
 
-                    // Create dedicated environment for the loop
+                    // `for` environment
                     auto for_env = std::make_shared<Environment>(std::map<std::string, llvm::Value*>(), env);
 
-                    // Generate init expression - handles both declarations and expressions
-                    if (init.type == ExpType::LIST && (init.list[0].string == "var" || init.list[0].string == "const")) {
-                        generate_expression(init, for_env); // Declaration
-                    } else {
-                        // Regular expression
-                        auto *init_val = generate_expression(init, for_env);
-                        if (init_val == nullptr) {
-                            LOG_ERROR("Invalid init expression in 'for' loop");
-                        }
-                    }
+                    // Generate init expression
+                    generate_expression(init, for_env);
 
-                    // Create control flow blocks
+                    // Create blocks
                     auto* cond_block = create_basic_block("for.cond", m_ACTIVE_FUNCTION);
-                    auto* body_block = create_basic_block("for.body", m_ACTIVE_FUNCTION);
-                    auto* step_block = create_basic_block("for.step", m_ACTIVE_FUNCTION);
-                    auto* break_block = create_basic_block("for.break", m_ACTIVE_FUNCTION);
+                    auto* body_block = create_basic_block("for.body");
+                    auto* step_block = create_basic_block("for.step");
+                    auto* break_blog = create_basic_block("for.break");
 
-                    // Jump to condition block
+                    // Conditions
                     m_IR_BUILDER->CreateBr(cond_block);
 
-                    // --- CONDITION BLOCK ---
+                    // Conditions block
                     m_IR_BUILDER->SetInsertPoint(cond_block);
-                    llvm::Value* cond_value = nullptr;
+                    auto* cond_value = generate_expression(condition, for_env);
+                    m_IR_BUILDER->CreateCondBr(cond_value, body_block, break_blog);
 
-                    try {
-                        cond_value = generate_expression(condition, for_env);
-                    } catch (...) {
-                        LOG_CRITICAL("Failed to generate condition expression in 'for' loop");
-                    }
-
-                    if (cond_value == nullptr) {
-                        LOG_CRITICAL("Condition expression in 'for' loop returned null value");
-                    }
-
-                    // Ensure condition is boolean type
-                    cond_value = implicit_cast(cond_value, m_IR_BUILDER->getInt1Ty(), *m_IR_BUILDER);
-                    m_IR_BUILDER->CreateCondBr(cond_value, body_block, break_block);
-
-                    // --- BODY BLOCK ---
+                    // Body block
+                    m_ACTIVE_FUNCTION->insert(m_ACTIVE_FUNCTION->end(), body_block);
                     m_IR_BUILDER->SetInsertPoint(body_block);
-                    m_LOOP_STACK.push_back({break_block, step_block});
-
-                    try {
-                        auto body_result = generate_expression(body, for_env);
-                    } catch (...) {
-                        LOG_ERROR("Error generating body in 'for' loop");
-                    }
-
+                    m_LOOP_STACK.push_back({break_blog, step_block});
+                    generate_expression(body, for_env);
                     m_LOOP_STACK.pop_back();
 
-                    // Add terminator if missing
+                    // Step
                     if (m_IR_BUILDER->GetInsertBlock()->getTerminator() == nullptr) {
                         m_IR_BUILDER->CreateBr(step_block);
                     }
 
-                    // --- STEP BLOCK ---
+                    // Step block
+                    m_ACTIVE_FUNCTION->insert(m_ACTIVE_FUNCTION->end(), step_block);
                     m_IR_BUILDER->SetInsertPoint(step_block);
+                    generate_expression(step, for_env);
+                    m_IR_BUILDER->CreateBr(cond_block);
 
-                    try {
-                        auto *step_result = generate_expression(step, for_env);
-                    } catch (...) {
-                        LOG_ERROR("Error generating step expression in 'for' loop");
-                    }
+                    // Break blog
+                    m_ACTIVE_FUNCTION->insert(m_ACTIVE_FUNCTION->end(), break_blog);
+                    m_IR_BUILDER->SetInsertPoint(break_blog);
 
-                    // Add terminator if missing
-                    if (m_IR_BUILDER->GetInsertBlock()->getTerminator() == nullptr) {
-                        m_IR_BUILDER->CreateBr(cond_block);
-                    }
-
-                    // --- BREAK BLOCK ---
-                    m_IR_BUILDER->SetInsertPoint(break_block);
-                    return m_IR_BUILDER->getInt32(0);
+                    return m_IR_BUILDER->getInt64(0);
                 }
 
                 if (oper == "break") {
@@ -1230,7 +1194,6 @@ auto MorningLanguageLLVM::generate_expression(const Exp& exp, const env& env) ->
                     LOG_DEBUG("Process create %s: %s", oper.c_str(), var_name.c_str());
 
                     auto* init = generate_expression(exp.list[2], env);
-
                     auto* var_type = extract_var_type(var_name_declaration);
 
                     if (llvm::isa<llvm::ArrayType>(var_type)) {

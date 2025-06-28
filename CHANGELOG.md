@@ -1,3 +1,9 @@
+commit 0895c4bce2c48b5419faa3c232bd3e415ed5b4e3
+Author: Alexeev Bronislav <alexeev.dev@mail.ru>
+Date:   Sat Jun 28 05:53:03 2025 +0700
+
+    fix bugs, improve architecture
+
 commit 91edf96f7e7a4d6e9a69be7e8348d80c91ebd3e5
 Author: Alexeev Bronislav <alexeev.dev@mail.ru>
 Date:   Thu Jun 26 16:58:46 2025 +0700

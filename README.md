@@ -90,7 +90,6 @@ graph TD
 | **!bool** | 1-byte | Boolean value | `[var (flag !bool) true]` |
 | **!str** | ptr + size | UTF-8 string | `[var (name !str) "Alice"]` |
 | **!ptr** | arch-dependent | Raw memory pointer | `[var (buffer !ptr) (mem-alloc 256)]` |
-| **!none** | 0-byte | Void type | `[func noop () -> !none]` |
 
 ### Memory Operations
 | Operation | Syntax | Description |

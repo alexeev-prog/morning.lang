@@ -54,14 +54,6 @@ struct LoopBlocks {
     llvm::BasicBlock* continue_block;    ///< Block to jump to when continuing loop
 };
 
-struct IntegerVariable {
-    llvm::Value* value{};
-    bool is_positive = true;
-    bool is_natural = true;
-    bool is_negative = true;
-    bool is_negative_with_zero = true;
-};
-
 /**
  * @class MorningLanguageLLVM
  * @brief Converts MorningLang source code to LLVM Intermediate Representation (IR)
@@ -101,7 +93,7 @@ class MorningLanguageLLVM {
      * @param output_base Base filename for output files (without extension)
      * @return int Status code (0 = success)
      */
-    auto execute(const std::string& program, const std::string& output_base, bool compile_raw_object_file = true) -> int;
+    auto execute(const std::string& program, const std::string& output_base) -> int;
 
     /**
      * @brief Generates IR for any expression type
@@ -131,9 +123,7 @@ class MorningLanguageLLVM {
     std::unique_ptr<llvm::IRBuilder<>> m_VARS_BUILDER;    ///< Builder for variable allocation
     std::map<std::string, llvm::Value*> m_CONSTANTS;    ///< Map of constant variables
     std::map<std::string, llvm::Value*> m_VARIABLES;    ///< Map of variables
-    std::map<std::string, IntegerVariable> m_INTEGER_VARIABLES;    ///< Map of integer variables
     std::map<std::string, llvm::ArrayType*> m_ARRAY_TYPES;    ///< Map of array types
-    std::map<std::string, llvm::Type*> m_VAR_TYPES;    ///< Map of variable types
 
     /**
      * @brief Get size of type in bytes
